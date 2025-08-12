@@ -32,7 +32,7 @@ export default function ProfilePage() {
   useEffect(() => {
     if (user) {
       reset({
-        name: user.name,
+        name: user.fullName,
         email: user.email,
       });
     }
@@ -119,7 +119,7 @@ export default function ProfilePage() {
                       required: 'Name is required',
                       minLength: {
                         value: 2,
-                        message: 'Name must be at least 2 characters',
+                        message: 'Name must be at least 3 characters',
                       },
                     })}
                     type="text"
@@ -174,7 +174,7 @@ export default function ProfilePage() {
                       onClick={() => {
                         setEditing(false);
                         reset({
-                          name: user.name,
+                          name: user.fullName,
                           email: user.email,
                         });
                         setError('');
@@ -200,7 +200,7 @@ export default function ProfilePage() {
                   <div>
                     <p className="text-sm text-gray-500">Role</p>
                     <p className="font-medium text-gray-900">
-                      {user.role === 'ADMIN' ? 'Administrator' : 'User'}
+                      {user.role === 'ADMIN' ? 'Administrator' : 'Client'}
                     </p>
                   </div>
                 </div>

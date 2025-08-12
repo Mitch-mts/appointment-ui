@@ -97,15 +97,18 @@ export default function DashboardPage() {
   }
 
   const upcomingAppointments = appointments.filter(
-    (apt) => apt.status === 'SCHEDULED' && new Date(apt.date) >= new Date()
+    (apt) => apt.status === 'PENDING' && new Date(apt.date) >= new Date()
   );
   const pastAppointments = appointments.filter(
     (apt) => apt.status === 'COMPLETED' || new Date(apt.date) < new Date()
   );
+  const cancelledAppointments = appointments.filter(
+    (apt) => apt.status === 'CANCELLED' || new Date(apt.date) < new Date()
+  );
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'SCHEDULED':
+      case 'PENDING':
         return 'primary';
       case 'COMPLETED':
         return 'success';
@@ -179,6 +182,24 @@ export default function DashboardPage() {
                     </Typography>
                     <Typography variant="h4" component="div">
                       {pastAppointments.length}
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <Card elevation={2}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <UsersIcon sx={{ fontSize: 40, color: 'info.main', mr: 2 }} />
+                  <Box>
+                    <Typography color="text.secondary" gutterBottom>
+                      Cancelled
+                    </Typography>
+                    <Typography variant="h4" component="div">
+                      {cancelledAppointments.length}
                     </Typography>
                   </Box>
                 </Box>

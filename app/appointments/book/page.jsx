@@ -61,6 +61,12 @@ export default function BookAppointmentPage() {
       return;
     }
 
+    // Validate required fields
+    if (!data.fullName || !data.email) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
     setError('');
     setSuccess('');
     setSubmitting(true);
@@ -69,6 +75,8 @@ export default function BookAppointmentPage() {
       const appointmentData = {
         date: format(selectedDate, 'yyyy-MM-dd'),
         time: selectedTime,
+        fullName: data.fullName,
+        email: data.email,
         notes: data.notes || '',
       };
 
@@ -206,18 +214,56 @@ export default function BookAppointmentPage() {
 
                 <Divider sx={{ my: 3 }} />
 
+                {/* Full Name Field */}
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Message sx={{ mr: 1, fontSize: 20 }} />
+                    Full Name
+                  </Typography>
+                  <TextField
+                    {...register('fullName', { required: 'Full name is required' })}
+                    fullWidth
+                    placeholder="Enter your full name"
+                    variant="outlined"
+                    error={!!errors.fullName}
+                    helperText={errors.fullName?.message}
+                  />
+                </Box>
+
+                {/* Email Field */}
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Message sx={{ mr: 1, fontSize: 20 }} />
+                    Email Address
+                  </Typography>
+                  <TextField
+                    {...register('email', { 
+                      required: 'Email is required',
+                      pattern: {
+                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                        message: 'Invalid email address'
+                      }
+                    })}
+                    fullWidth
+                    placeholder="Enter your email address"
+                    variant="outlined"
+                    error={!!errors.email}
+                    helperText={errors.email?.message}
+                  />
+                </Box>
+
                 {/* Notes Field */}
                 <Box sx={{ mb: 4 }}>
                   <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
                     <Message sx={{ mr: 1, fontSize: 20 }} />
-                    Notes (Optional)
+                    Additional Notes
                   </Typography>
                   <TextField
                     {...register('notes')}
                     multiline
-                    rows={4}
+                    rows={3}
                     fullWidth
-                    placeholder="Add any additional notes or special requirements..."
+                    placeholder="Add any additional notes or special requirements"
                     variant="outlined"
                   />
                 </Box>
@@ -256,7 +302,8 @@ export default function BookAppointmentPage() {
                 {[
                   'Select an available date from the calendar',
                   'Choose an available time slot',
-                  'Add any optional notes',
+                  'Fill in your full name and email address',
+                  'Add any optional notes or special requirements',
                   'Click "Book Appointment" to confirm'
                 ].map((step, index) => (
                   <Box
