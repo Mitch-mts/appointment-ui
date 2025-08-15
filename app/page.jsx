@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { Calendar, Clock, Users, Shield } from 'lucide-react';
 
 export default function HomePage() {

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { formatDate, getStatusColor } from '@/lib/utils.js';
+import { formatDate, getStatusColor } from '../lib/utils.js';
 import { Calendar, Clock, User, Trash2, Edit } from 'lucide-react';
 
 export default function AppointmentCard({

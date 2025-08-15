@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useAuth } from '@/contexts/AuthContext.jsx';
+import { useAuth } from '../../../contexts/AuthContext.jsx';
 import { useRouter } from 'next/navigation';
-import Navigation from '@/components/Navigation.jsx';
-import AppointmentCalendar from '@/components/Calendar.jsx';
-import { appointmentAPI } from '@/lib/api.js';
+import Navigation from '../../../components/Navigation.jsx';
+import AppointmentCalendar from '../../../components/Calendar.jsx';
+import { appointmentAPI } from '../../../lib/api.js';
 import { format } from 'date-fns';
+import { isTimeSlotAvailable } from '../../../lib/utils.js';
 import { 
   Container, 
   Box, 
@@ -61,6 +62,12 @@ export default function BookAppointmentPage() {
       return;
     }
 
+    // Validate that the selected time hasn't passed
+    if (!isTimeSlotAvailable(selectedTime, selectedDate)) {
+      setError('The selected time has already passed. Please select a different time.');
+      return;
+    }
+
     // Validate required fields
     if (!data.fullName || !data.email) {
       setError('Please fill in all required fields');
@@ -79,6 +86,8 @@ export default function BookAppointmentPage() {
         email: data.email,
         notes: data.notes || '',
       };
+
+      console.log(appointmentData);
 
       const response = await appointmentAPI.createAppointment(appointmentData);
       if (response.success) {
@@ -122,7 +131,7 @@ export default function BookAppointmentPage() {
     <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
       <Navigation />
       
-      <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Container maxWidth="xl" sx={{ py: 4, px: 2 }}>
         <Box sx={{ mb: 4 }}>
           <Link href="/appointments" style={{ textDecoration: 'none' }}>
             <Button
@@ -140,9 +149,9 @@ export default function BookAppointmentPage() {
           </Typography>
         </Box>
 
-        <Grid container spacing={4}>
+        <Grid container spacing={6}>
           {/* Calendar Section */}
-          <Grid item xs={12} lg={6}>
+          <Grid item xs={12} lg={5}>
             <AppointmentCalendar
               selectedDate={selectedDate}
               onDateSelect={handleDateSelect}
@@ -153,8 +162,8 @@ export default function BookAppointmentPage() {
           </Grid>
 
           {/* Booking Form */}
-          <Grid item xs={12} lg={6}>
-            <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
+          <Grid item xs={12} lg={7}>
+            <Paper elevation={3} sx={{ p: 5, borderRadius: 3, height: 'fit-content' }}>
               <Typography variant="h5" component="h2" gutterBottom>
                 Appointment Details
               </Typography>
@@ -172,100 +181,164 @@ export default function BookAppointmentPage() {
               )}
 
               <form onSubmit={handleSubmit(onSubmit)}>
-                {/* Selected Date and Time Display */}
+                {/* Selected Date and Time Display - Side by Side */}
                 <Box sx={{ mb: 4 }}>
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    p: 2, 
-                    bgcolor: 'grey.50', 
-                    borderRadius: 2,
-                    mb: 2
-                  }}>
-                    <CalendarToday sx={{ mr: 2, color: 'primary.main' }} />
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">
-                        Selected Date
-                      </Typography>
-                      <Typography variant="body1" fontWeight="medium">
-                        {selectedDate ? format(selectedDate, 'EEEE, MMMM dd, yyyy') : 'Not selected'}
-                      </Typography>
-                    </Box>
+                  <Typography variant="h6" gutterBottom sx={{ mb: 2, color: 'text.primary' }}>
+                    Selected Date & Time
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        p: 2.5, 
+                        bgcolor: 'primary.50', 
+                        borderRadius: 2,
+                        border: '2px solid',
+                        borderColor: selectedDate ? 'primary.main' : 'grey.300',
+                        transition: 'all 0.2s ease-in-out',
+                        '&:hover': {
+                          borderColor: 'primary.main',
+                          bgcolor: 'primary.100'
+                        }
+                      }}>
+                        <CalendarToday sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
+                        <Box>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                            Selected Date
+                          </Typography>
+                          <Typography variant="body1" fontWeight="600" color="primary.main">
+                            {selectedDate ? format(selectedDate, 'EEEE, MMMM dd, yyyy') : 'Not selected'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+
+                    <Grid item xs={12} sm={6}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        p: 2.5, 
+                        bgcolor: 'primary.50', 
+                        borderRadius: 2,
+                        border: '2px solid',
+                        borderColor: selectedTime ? 'primary.main' : 'grey.300',
+                        transition: 'all 0.2s ease-in-out',
+                        '&:hover': {
+                          borderColor: 'primary.main',
+                          bgcolor: 'primary.100'
+                        }
+                      }}>
+                        <Schedule sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
+                        <Box>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                            Selected Time
+                          </Typography>
+                          <Typography variant="body1" fontWeight="600" color="primary.main">
+                            {selectedTime || 'Not selected'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Box>
+
+                <Divider sx={{ my: 4 }} />
+
+                {/* Personal Information Section */}
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="h6" gutterBottom sx={{ mb: 3, color: 'text.primary', display: 'flex', alignItems: 'center' }}>
+                    <Message sx={{ mr: 1.5, color: 'primary.main' }} />
+                    Personal Information
+                  </Typography>
+                  
+                  <Grid container spacing={3}>
+                    {/* Full Name Field */}
+                    <Grid item xs={12} sm={6}>
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
+                          Full Name *
+                        </Typography>
+                        <TextField
+                          {...register('fullName', { required: 'Full name is required' })}
+                          fullWidth
+                          placeholder="Enter your full name"
+                          variant="outlined"
+                          error={!!errors.fullName}
+                          helperText={errors.fullName?.message}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: 2,
+                              '&:hover fieldset': {
+                                borderColor: 'primary.main',
+                              },
+                            },
+                          }}
+                        />
+                      </Box>
+                    </Grid>
+
+                    {/* Email Field */}
+                    <Grid item xs={12} sm={6}>
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
+                          Email Address *
+                        </Typography>
+                        <TextField
+                          {...register('email', { 
+                            required: 'Email is required',
+                            pattern: {
+                              value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                              message: 'Invalid email address'
+                            }
+                          })}
+                          fullWidth
+                          placeholder="Enter your email address"
+                          variant="outlined"
+                          error={!!errors.email}
+                          helperText={errors.email?.message}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: 2,
+                              '&:hover fieldset': {
+                                borderColor: 'primary.main',
+                              },
+                            },
+                          }}
+                        />
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Box>
+
+                {/* Additional Notes Section */}
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="h6" gutterBottom sx={{ mb: 3, color: 'text.primary', display: 'flex', alignItems: 'center' }}>
+                    <Message sx={{ mr: 1.5, color: 'primary.main' }} />
+                    Additional Information
+                  </Typography>
+                  
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
+                      Notes & Special Requirements
+                    </Typography>
+                    <TextField
+                      {...register('notes')}
+                      multiline
+                      rows={4}
+                      fullWidth
+                      placeholder="Add any additional notes, special requirements, or questions for your appointment..."
+                      variant="outlined"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          '&:hover fieldset': {
+                            borderColor: 'primary.main',
+                          },
+                        },
+                      }}
+                    />
                   </Box>
-
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    p: 2, 
-                    bgcolor: 'grey.50', 
-                    borderRadius: 2
-                  }}>
-                    <Schedule sx={{ mr: 2, color: 'primary.main' }} />
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">
-                        Selected Time
-                      </Typography>
-                      <Typography variant="body1" fontWeight="medium">
-                        {selectedTime || 'Not selected'}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Box>
-
-                <Divider sx={{ my: 3 }} />
-
-                {/* Full Name Field */}
-                <Box sx={{ mb: 4 }}>
-                  <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Message sx={{ mr: 1, fontSize: 20 }} />
-                    Full Name
-                  </Typography>
-                  <TextField
-                    {...register('fullName', { required: 'Full name is required' })}
-                    fullWidth
-                    placeholder="Enter your full name"
-                    variant="outlined"
-                    error={!!errors.fullName}
-                    helperText={errors.fullName?.message}
-                  />
-                </Box>
-
-                {/* Email Field */}
-                <Box sx={{ mb: 4 }}>
-                  <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Message sx={{ mr: 1, fontSize: 20 }} />
-                    Email Address
-                  </Typography>
-                  <TextField
-                    {...register('email', { 
-                      required: 'Email is required',
-                      pattern: {
-                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                        message: 'Invalid email address'
-                      }
-                    })}
-                    fullWidth
-                    placeholder="Enter your email address"
-                    variant="outlined"
-                    error={!!errors.email}
-                    helperText={errors.email?.message}
-                  />
-                </Box>
-
-                {/* Notes Field */}
-                <Box sx={{ mb: 4 }}>
-                  <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Message sx={{ mr: 1, fontSize: 20 }} />
-                    Additional Notes
-                  </Typography>
-                  <TextField
-                    {...register('notes')}
-                    multiline
-                    rows={3}
-                    fullWidth
-                    placeholder="Add any additional notes or special requirements"
-                    variant="outlined"
-                  />
                 </Box>
 
                 {/* Submit Button */}
@@ -276,9 +349,17 @@ export default function BookAppointmentPage() {
                   fullWidth
                   disabled={!selectedDate || !selectedTime || submitting}
                   sx={{ 
-                    py: 1.5, 
+                    py: 2, 
                     borderRadius: 2,
-                    fontSize: '1.1rem'
+                    fontSize: '1.1rem',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    boxShadow: 3,
+                    '&:hover': {
+                      boxShadow: 6,
+                      transform: 'translateY(-1px)',
+                    },
+                    transition: 'all 0.2s ease-in-out'
                   }}
                 >
                   {submitting ? (

@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useAuth } from '@/contexts/AuthContext.jsx';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useRouter } from 'next/navigation';
-import Navigation from '@/components/Navigation.jsx';
-import { userAPI } from '@/lib/api.js';
+import Navigation from '../../components/Navigation.jsx';
+import { userAPI } from '../../lib/api.js';
 import { User as UserIcon, Mail, Shield } from 'lucide-react';
 
 export default function ProfilePage() {

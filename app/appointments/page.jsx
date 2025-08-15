@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext.jsx';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useRouter } from 'next/navigation';
-import Navigation from '@/components/Navigation.jsx';
-import AppointmentCard from '@/components/AppointmentCard.jsx';
-import { appointmentAPI } from '@/lib/api.js';
+import Navigation from '../../components/Navigation.jsx';
+import AppointmentCard from '../../components/AppointmentCard.jsx';
+import { appointmentAPI } from '../../lib/api.js';
 import { Plus, Filter } from 'lucide-react';
 import Link from 'next/link';
 

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useAuth } from '@/contexts/AuthContext.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {

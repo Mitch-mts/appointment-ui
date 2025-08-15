@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import {
   AppBar,
   Toolbar,

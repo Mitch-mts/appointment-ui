@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Calendar from 'react-calendar';
-import { format, parseISO, isSameDay } from 'date-fns';
-import { appointmentAPI } from '@/lib/api.js';
-import { getTimeSlots } from '@/lib/utils.js';
+import { format, parseISO, isSameDay, isToday, isAfter, startOfDay } from 'date-fns';
+import { appointmentAPI } from '../lib/api.js';
+import { getTimeSlots, getAvailableTimeSlotsForDate, isTimeSlotAvailable } from '../lib/utils.js';
 import { 
   Box, 
   Paper, 
@@ -47,13 +47,17 @@ export default function AppointmentCalendar({
           for (let i = 0; i < 30; i++) {
             const date = new Date(today);
             date.setDate(today.getDate() + i);
-            mockDates.push({
-              date: format(date, 'yyyy-MM-dd'),
-              availableSlots: getTimeSlots().map(time => ({
-                time,
-                available: Math.random() > 0.3 // 70% chance of being available
-              }))
-            });
+            
+            // Only add dates that are today or in the future
+            if (isAfter(startOfDay(date), startOfDay(today)) || isToday(date)) {
+              mockDates.push({
+                date: format(date, 'yyyy-MM-dd'),
+                availableSlots: getAvailableTimeSlotsForDate(date).map(time => ({
+                  time,
+                  available: Math.random() > 0.3 // 70% chance of being available
+                }))
+              });
+            }
           }
           setAvailableDates(mockDates);
         }
@@ -65,13 +69,17 @@ export default function AppointmentCalendar({
         for (let i = 0; i < 30; i++) {
           const date = new Date(today);
           date.setDate(today.getDate() + i);
-          mockDates.push({
-            date: format(date, 'yyyy-MM-dd'),
-            availableSlots: getTimeSlots().map(time => ({
-              time,
-              available: Math.random() > 0.3 // 70% chance of being available
-            }))
-          });
+          
+          // Only add dates that are today or in the future
+          if (isAfter(startOfDay(date), startOfDay(today)) || isToday(date)) {
+            mockDates.push({
+              date: format(date, 'yyyy-MM-dd'),
+              availableSlots: getAvailableTimeSlotsForDate(date).map(time => ({
+                time,
+                available: Math.random() > 0.3 // 70% chance of being available
+              }))
+            });
+          }
         }
         setAvailableDates(mockDates);
       } finally {
@@ -83,15 +91,37 @@ export default function AppointmentCalendar({
   }, []);
 
   const isDateAvailable = (date) => {
+    // Don't allow past dates
+    if (isAfter(startOfDay(new Date()), startOfDay(date))) {
+      return false;
+    }
+    
     const dateStr = format(date, 'yyyy-MM-dd');
     const availableDate = availableDates.find(d => d.date === dateStr);
-    return availableDate ? availableDate.availableSlots.some(slot => slot.available) : false;
+    
+    if (!availableDate) return false;
+    
+    // For today, check if there are any available time slots that haven't passed
+    if (isToday(date)) {
+      return availableDate.availableSlots.some(slot => 
+        slot.available && isTimeSlotAvailable(slot.time, date)
+      );
+    }
+    
+    // For future dates, check if there are any available slots
+    return availableDate.availableSlots.some(slot => slot.available);
   };
 
   const getAvailableSlotsForDate = (date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     const availableDate = availableDates.find(d => d.date === dateStr);
-    return availableDate ? availableDate.availableSlots : [];
+    
+    if (!availableDate) return [];
+    
+    // Filter out time slots that have passed for today
+    return availableDate.availableSlots.filter(slot => 
+      slot.available && isTimeSlotAvailable(slot.time, date)
+    );
   };
 
   const tileClassName = ({ date }) => {
@@ -109,11 +139,18 @@ export default function AppointmentCalendar({
       return `${baseClasses} bg-gray-100 text-gray-400 cursor-not-allowed`;
     }
     
+    // Past dates should be disabled
+    if (isAfter(startOfDay(new Date()), startOfDay(date))) {
+      return `${baseClasses} bg-gray-100 text-gray-400 cursor-not-allowed`;
+    }
+    
     return `${baseClasses} hover:bg-gray-50 cursor-pointer`;
   };
 
   const tileDisabled = ({ date }) => {
-    return !isDateAvailable(date) || disabledDates.some(disabledDate => isSameDay(date, disabledDate));
+    return !isDateAvailable(date) || 
+           disabledDates.some(disabledDate => isSameDay(date, disabledDate)) ||
+           isAfter(startOfDay(new Date()), startOfDay(date));
   };
 
   const handleDateChange = (value) => {

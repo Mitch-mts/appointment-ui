@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext.jsx';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useRouter } from 'next/navigation';
-import Navigation from '@/components/Navigation.jsx';
-import { appointmentAPI } from '@/lib/api.js';
-import { formatDate, formatTime } from '@/lib/utils.js';
+import Navigation from '../../components/Navigation.jsx';
+import { appointmentAPI } from '../../lib/api.js';
+import { formatDate, formatTime, isToday } from '../../lib/utils.js';
 import {
   Box,
   Container,
@@ -23,6 +23,7 @@ import {
   Alert,
   CircularProgress,
   Paper,
+  Divider,
 } from '@mui/material';
 import {
   CalendarToday as CalendarIcon,
@@ -32,6 +33,7 @@ import {
   TrendingUp as TrendingUpIcon,
   Cancel as CancelIcon,
   Event as EventIcon,
+  CheckCircle,
 } from '@mui/icons-material';
 import Link from 'next/link';
 
@@ -96,23 +98,189 @@ export default function DashboardPage() {
     return null;
   }
 
-  const upcomingAppointments = appointments.filter(
-    (apt) => apt.status === 'PENDING' && new Date(apt.date) >= new Date()
-  );
-  const pastAppointments = appointments.filter(
-    (apt) => apt.status === 'COMPLETED' || new Date(apt.date) < new Date()
-  );
+  // Filter appointments for current day only
+  const todayAppointments = appointments.filter(apt => {
+    if (!apt.bookedDate) return false;
+    
+    // Debug logging
+    console.log('Checking appointment:', apt.fullName, 'Date:', apt.bookedDate, 'Type:', typeof apt.bookedDate);
+    
+    try {
+      // Handle different date formats
+      let dateObj;
+      if (typeof apt.bookedDate === 'string') {
+        dateObj = new Date(apt.bookedDate);
+      } else if (apt.bookedDate instanceof Date) {
+        dateObj = apt.bookedDate;
+      } else {
+        console.log('Invalid date format for:', apt.fullName);
+        return false;
+      }
+      
+      // Check if date is valid
+      if (isNaN(dateObj.getTime())) {
+        console.log('Invalid date object for:', apt.fullName);
+        return false;
+      }
+      
+      // Custom today comparison
+      const today = new Date();
+      const isTodayResult = dateObj.getDate() === today.getDate() &&
+                           dateObj.getMonth() === today.getMonth() &&
+                           dateObj.getFullYear() === today.getFullYear();
+      
+      console.log('Is today result for', apt.fullName, ':', isTodayResult);
+      console.log('Appointment date:', dateObj.toDateString(), 'Today:', today.toDateString());
+      
+      return isTodayResult;
+    } catch (error) {
+      console.error('Error processing date for appointment:', apt.fullName, error);
+      return false;
+    }
+  });
+
+  console.log('Today appointments found:', todayAppointments.length);
+  console.log('All appointments:', appointments.length);
+
+  const upcomingAppointments = todayAppointments.filter(apt => {
+    // If status is CANCELLED, don't show in upcoming
+    if (apt.bookingStatus === "CANCELLED") return false;
+    
+    // If it's today and has a time, check if the time has passed
+    if (apt.bookedDate && apt.bookedTime) {
+      try {
+        const now = new Date();
+        const today = new Date();
+        const appointmentDate = new Date(apt.bookedDate);
+        
+        // Check if it's today
+        if (appointmentDate.getDate() === today.getDate() &&
+            appointmentDate.getMonth() === today.getMonth() &&
+            appointmentDate.getFullYear() === today.getFullYear()) {
+          
+          // Parse the time (assuming format like "14:30" or "2:30 PM")
+          let timeStr = apt.bookedTime;
+          let appointmentHour, appointmentMinute;
+          
+          if (timeStr.includes(':')) {
+            const timeParts = timeStr.split(':');
+            appointmentHour = parseInt(timeParts[0]);
+            appointmentMinute = parseInt(timeParts[1]);
+          } else if (timeStr.includes(' ')) {
+            // Handle "2:30 PM" format
+            const timeParts = timeStr.split(' ');
+            const hourMinute = timeParts[0].split(':');
+            appointmentHour = parseInt(hourMinute[0]);
+            appointmentMinute = parseInt(hourMinute[1]);
+            
+            if (timeParts[1].toUpperCase() === 'PM' && appointmentHour !== 12) {
+              appointmentHour += 12;
+            } else if (timeParts[1].toUpperCase() === 'AM' && appointmentHour === 12) {
+              appointmentHour = 0;
+            }
+          }
+          
+          if (appointmentHour !== undefined && appointmentMinute !== undefined) {
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+            
+            // If appointment time has passed, don't show in upcoming
+            if (appointmentHour < currentHour || 
+                (appointmentHour === currentHour && appointmentMinute <= currentMinute)) {
+              return false; // Exclude from upcoming if time has passed
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error processing time for appointment:', apt.fullName, error);
+      }
+    }
+    
+    // Include in upcoming if status is PENDING or null (and time hasn't passed)
+    return apt.bookingStatus === "PENDING" || apt.bookingStatus === null;
+  });
+  
+  // Filter completed appointments: today's appointments that have passed their time OR have COMPLETED status
+  const completedAppointments = todayAppointments.filter(apt => {
+    // If status is COMPLETED, include it
+    if (apt.bookingStatus === "COMPLETED") return true;
+    
+    // If it's today and has a time, check if the time has passed
+    if (apt.bookedDate && apt.bookedTime) {
+      try {
+        const now = new Date();
+        const today = new Date();
+        const appointmentDate = new Date(apt.bookedDate);
+        
+        // Check if it's today
+        if (appointmentDate.getDate() === today.getDate() &&
+            appointmentDate.getMonth() === today.getMonth() &&
+            appointmentDate.getFullYear() === today.getFullYear()) {
+          
+          // Parse the time (assuming format like "14:30" or "2:30 PM")
+          let timeStr = apt.bookedTime;
+          let appointmentHour, appointmentMinute;
+          
+          if (timeStr.includes(':')) {
+            const timeParts = timeStr.split(':');
+            appointmentHour = parseInt(timeParts[0]);
+            appointmentMinute = parseInt(timeParts[1]);
+          } else if (timeStr.includes(' ')) {
+            // Handle "2:30 PM" format
+            const timeParts = timeStr.split(' ');
+            const hourMinute = timeParts[0].split(':');
+            appointmentHour = parseInt(hourMinute[0]);
+            appointmentMinute = parseInt(hourMinute[1]);
+            
+            if (timeParts[1].toUpperCase() === 'PM' && appointmentHour !== 12) {
+              appointmentHour += 12;
+            } else if (timeParts[1].toUpperCase() === 'AM' && appointmentHour === 12) {
+              appointmentHour = 0;
+            }
+          }
+          
+          if (appointmentHour !== undefined && appointmentMinute !== undefined) {
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+            
+            // Check if appointment time has passed
+            if (appointmentHour < currentHour || 
+                (appointmentHour === currentHour && appointmentMinute <= currentMinute)) {
+              return true; // Include this as "completed" for today
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error processing time for appointment:', apt.fullName, error);
+      }
+    }
+    
+    return false;
+  });
+  
+  console.log('Upcoming appointments for today:', upcomingAppointments.length);
+  console.log('Completed appointments for today:', completedAppointments.length);
+  
   const cancelledAppointments = appointments.filter(
-    (apt) => apt.status === 'CANCELLED' || new Date(apt.date) < new Date()
+    (apt) => apt.bookingStatus === "CANCELLED"
+  );
+  
+  const pendingStatusAppointments = appointments.filter(
+    (apt) => apt.bookingStatus === null || apt.bookingStatus === "PENDING"
+  );
+
+  const allCompletedAppointments = appointments.filter(
+    (apt) => apt.bookingStatus === "COMPLETED"
   );
 
   const getStatusColor = (status) => {
+    if (!status) return 'warning';
     switch (status) {
-      case 'PENDING':
+      case "PENDING":
         return 'primary';
-      case 'COMPLETED':
+      case "COMPLETED":
         return 'success';
-      case 'CANCELLED':
+      case "CANCELLED":
         return 'error';
       default:
         return 'default';
@@ -135,7 +303,7 @@ export default function DashboardPage() {
 
         {/* Stats Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={3}>
             <Card elevation={2}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -153,17 +321,17 @@ export default function DashboardPage() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={3}>
             <Card elevation={2}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <ClockIcon sx={{ fontSize: 40, color: 'success.main', mr: 2 }} />
                   <Box>
                     <Typography color="text.secondary" gutterBottom>
-                      Upcoming
+                      Pending
                     </Typography>
                     <Typography variant="h4" component="div">
-                      {upcomingAppointments.length}
+                      {pendingStatusAppointments.length}
                     </Typography>
                   </Box>
                 </Box>
@@ -171,7 +339,7 @@ export default function DashboardPage() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={3}>
             <Card elevation={2}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -181,7 +349,7 @@ export default function DashboardPage() {
                       Completed
                     </Typography>
                     <Typography variant="h4" component="div">
-                      {pastAppointments.length}
+                      {allCompletedAppointments.length}
                     </Typography>
                   </Box>
                 </Box>
@@ -189,11 +357,11 @@ export default function DashboardPage() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={3}>
             <Card elevation={2}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <UsersIcon sx={{ fontSize: 40, color: 'info.main', mr: 2 }} />
+                  <CancelIcon sx={{ fontSize: 40, color: 'error.main', mr: 2 }} />
                   <Box>
                     <Typography color="text.secondary" gutterBottom>
                       Cancelled
@@ -231,42 +399,76 @@ export default function DashboardPage() {
           </Button>
         </Box>
 
-        {/* Upcoming Appointments */}
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Card elevation={2}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Upcoming Appointments
-                </Typography>
+        {/* Today's Appointments - Side by Side */}
+        <Grid container spacing={4}>
+          {/* Upcoming Appointments */}
+          <Grid item xs={12} lg={4}>
+            <Card elevation={3} sx={{ height: 'fit-content', minHeight: 400 }}>
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <ClockIcon sx={{ color: 'primary.main', mr: 1 }} />
+                  <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
+                    Today's Upcoming
+                  </Typography>
+                </Box>
+                <Divider sx={{ mb: 2 }} />
+                
                 {upcomingAppointments.length === 0 ? (
-                  <Alert severity="info">
-                    No upcoming appointments. Book your first appointment!
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    No upcoming appointments for today. Book your first appointment!
                   </Alert>
                 ) : (
-                  <List>
-                    {upcomingAppointments.slice(0, 5).map((appointment) => (
-                      <ListItem key={appointment.id} divider>
-                        <ListItemText
-                          primary={formatDate(appointment.date)}
-                          secondary={`${formatTime(appointment.time)} - ${appointment.notes || 'No notes'}`}
-                        />
-                        <ListItemSecondaryAction>
-                          <Chip
-                            label={appointment.status}
-                            color={getStatusColor(appointment.status)}
-                            size="small"
-                          />
-                          <IconButton
-                            edge="end"
-                            onClick={() => handleCancelAppointment(appointment.id)}
-                            color="error"
-                            size="small"
-                          >
-                            <CancelIcon />
-                          </IconButton>
-                        </ListItemSecondaryAction>
-                      </ListItem>
+                  <List sx={{ p: 0 }}>
+                    {upcomingAppointments.map((appointment, index) => (
+                      <Box key={appointment.id}>
+                        <ListItem sx={{ 
+                          p: 2, 
+                          mb: 1, 
+                          borderRadius: 1,
+                          backgroundColor: 'background.paper',
+                          border: '1px solid',
+                          borderColor: 'divider'
+                        }}>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                              {appointment.fullName}
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                📅 Date: {appointment.bookedDate ? formatDate(appointment.bookedDate) : 'No date'}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                🕐 Time: {appointment.bookedTime ? formatTime(appointment.bookedTime) : 'No time'}
+                              </Typography>
+                              {appointment.notes && (
+                                <Typography variant="body2" color="text.secondary">
+                                  📝 Notes: {appointment.notes}
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+                            <Chip
+                              label={appointment.bookingStatus || "PENDING"}
+                              color={getStatusColor(appointment.bookingStatus)}
+                              size="small"
+                            />
+                            <IconButton
+                              onClick={() => handleCancelAppointment(appointment.id)}
+                              color="error"
+                              size="small"
+                              sx={{ 
+                                backgroundColor: 'error.light',
+                                color: 'white',
+                                '&:hover': { backgroundColor: 'error.main' }
+                              }}
+                            >
+                              <CancelIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        </ListItem>
+                        {index < upcomingAppointments.length - 1 && <Divider sx={{ my: 1 }} />}
+                      </Box>
                     ))}
                   </List>
                 )}
@@ -274,32 +476,139 @@ export default function DashboardPage() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={6}>
-            <Card elevation={2}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Recent Appointments
-                </Typography>
-                {pastAppointments.length === 0 ? (
-                  <Alert severity="info">
-                    No past appointments yet.
+          {/* Passed Appointments */}
+          <Grid item xs={12} lg={4}>
+            <Card elevation={3} sx={{ height: 'fit-content', minHeight: 400 }}>
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <UsersIcon sx={{ color: 'success.main', mr: 1 }} />
+                  <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
+                    Today's Passed Appointments
+                  </Typography>
+                </Box>
+                <Divider sx={{ mb: 2 }} />
+                
+                {completedAppointments.length === 0 ? (
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    No passed appointments for today yet.
                   </Alert>
                 ) : (
-                  <List>
-                    {pastAppointments.slice(0, 5).map((appointment) => (
-                      <ListItem key={appointment.id} divider>
-                        <ListItemText
-                          primary={formatDate(appointment.date)}
-                          secondary={`${formatTime(appointment.time)} - ${appointment.notes || 'No notes'}`}
-                        />
-                        <ListItemSecondaryAction>
-                          <Chip
-                            label={appointment.status}
-                            color={getStatusColor(appointment.status)}
-                            size="small"
-                          />
-                        </ListItemSecondaryAction>
-                      </ListItem>
+                  <List sx={{ p: 0 }}>
+                    {completedAppointments.map((appointment, index) => (
+                      <Box key={appointment.id}>
+                        <ListItem sx={{ 
+                          p: 2, 
+                          mb: 1, 
+                          borderRadius: 1,
+                          backgroundColor: 'background.paper',
+                          border: '1px solid',
+                          borderColor: 'divider'
+                        }}>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                              {appointment.fullName}
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                📅 Date: {appointment.bookedDate ? formatDate(appointment.bookedDate) : 'No date'}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                🕐 Time: {appointment.bookedTime ? formatTime(appointment.bookedTime) : 'No time'}
+                              </Typography>
+                              {appointment.notes && (
+                                <Typography variant="body2" color="text.secondary">
+                                  📝 Notes: {appointment.notes}
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                            <Chip
+                              label={appointment.bookingStatus || "PASSED"}
+                              color={appointment.bookingStatus === "COMPLETED" ? "success" : "default"}
+                              size="small"
+                            />
+                          </Box>
+                        </ListItem>
+                        {index < completedAppointments.length - 1 && <Divider sx={{ my: 1 }} />}
+                      </Box>
+                    ))}
+                  </List>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Completed Bookings */}
+          <Grid item xs={12} lg={4}>
+            <Card elevation={3} sx={{ height: 'fit-content', minHeight: 400 }}>
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <CheckCircle sx={{ color: 'success.main', mr: 1 }} />
+                  <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
+                    Today's Completed Bookings
+                  </Typography>
+                </Box>
+                <Divider sx={{ mb: 2 }} />
+                
+                {allCompletedAppointments.filter(apt => {
+                  if (!apt.bookedDate) return false;
+                  const today = new Date();
+                  const appointmentDate = new Date(apt.bookedDate);
+                  return appointmentDate.getDate() === today.getDate() &&
+                         appointmentDate.getMonth() === today.getMonth() &&
+                         appointmentDate.getFullYear() === today.getFullYear();
+                }).length === 0 ? (
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    No completed bookings for today yet.
+                  </Alert>
+                ) : (
+                  <List sx={{ p: 0 }}>
+                    {allCompletedAppointments.filter(apt => {
+                      if (!apt.bookedDate) return false;
+                      const today = new Date();
+                      const appointmentDate = new Date(apt.bookedDate);
+                      return appointmentDate.getDate() === today.getDate() &&
+                             appointmentDate.getMonth() === today.getMonth() &&
+                             appointmentDate.getFullYear() === today.getFullYear();
+                    }).map((appointment, index, filteredArray) => (
+                      <Box key={appointment.id}>
+                        <ListItem sx={{ 
+                          p: 2, 
+                          mb: 1, 
+                          borderRadius: 1,
+                          backgroundColor: 'background.paper',
+                          border: '1px solid',
+                          borderColor: 'divider'
+                        }}>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                              {appointment.fullName}
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                📅 Date: {appointment.bookedDate ? formatDate(appointment.bookedDate) : 'No date'}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                🕐 Time: {appointment.bookedTime ? formatTime(appointment.bookedTime) : 'No time'}
+                              </Typography>
+                              {appointment.notes && (
+                                <Typography variant="body2" color="text.secondary">
+                                  📝 Notes: {appointment.notes}
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                            <Chip
+                              label="COMPLETED"
+                              color="success"
+                              size="small"
+                            />
+                          </Box>
+                        </ListItem>
+                        {index < filteredArray.length - 1 && <Divider sx={{ my: 1 }} />}
+                      </Box>
                     ))}
                   </List>
                 )}

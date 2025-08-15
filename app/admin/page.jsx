@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext.jsx';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useRouter } from 'next/navigation';
-import Navigation from '@/components/Navigation.jsx';
-import AppointmentCard from '@/components/AppointmentCard.jsx';
-import { appointmentAPI } from '@/lib/api.js';
-import { formatDate, formatTime } from '@/lib/utils.js';
+import Navigation from '../../components/Navigation.jsx';
+import AppointmentCard from '../../components/AppointmentCard.jsx';
+import { appointmentAPI } from '../../lib/api.js';
+import { formatDate, formatTime } from '../../lib/utils.js';
 import { Calendar, Users, Filter, TrendingUp, AlertCircle } from 'lucide-react';
 
 export default function AdminPage() {
