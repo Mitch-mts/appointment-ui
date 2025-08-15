@@ -15,6 +15,8 @@ export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -55,15 +57,32 @@ export default function AppointmentsPage() {
   const filteredAppointments = appointments.filter((appointment) => {
     switch (filter) {
       case 'scheduled':
-        return appointment.status === 'SCHEDULED';
+        return appointment.bookingStatus === 'SCHEDULED';
       case 'completed':
-        return appointment.status === 'COMPLETED';
+        return appointment.bookingStatus === 'COMPLETED';
       case 'cancelled':
-        return appointment.status === 'CANCELLED';
+        return appointment.bookingStatus === 'CANCELLED';
+      case 'pending':
+        return appointment.bookingStatus === 'PENDING' || appointment.bookingStatus === null;
       default:
         return true;
     }
   });
+
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentAppointments = filteredAppointments.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
+  // Reset to first page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
 
   if (loading) {
     return (
@@ -109,6 +128,7 @@ export default function AppointmentsPage() {
                 { key: 'scheduled', label: 'Scheduled' },
                 { key: 'completed', label: 'Completed' },
                 { key: 'cancelled', label: 'Cancelled' },
+                { key: 'pending', label: 'Pending' },
               ].map((filterOption) => (
                 <button
                   key={filterOption.key}
@@ -132,9 +152,9 @@ export default function AppointmentsPage() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
             <p className="mt-4 text-gray-600">Loading appointments...</p>
           </div>
-        ) : filteredAppointments.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredAppointments.map((appointment) => (
+        ) : currentAppointments.length > 0 ? (
+          <div className="space-y-3">
+            {currentAppointments.map((appointment) => (
               <AppointmentCard
                 key={appointment.id}
                 appointment={appointment}
@@ -166,6 +186,47 @@ export default function AppointmentsPage() {
                 View all appointments
               </button>
             )}
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="mt-8 flex items-center justify-between">
+            <div className="text-sm text-gray-700">
+              Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredAppointments.length)} of {filteredAppointments.length} appointments
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`px-3 py-2 text-sm font-medium rounded-md ${
+                    currentPage === page
+                      ? 'bg-primary-600 text-white'
+                      : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>
