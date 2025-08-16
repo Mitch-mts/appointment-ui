@@ -24,6 +24,10 @@ import {
   CircularProgress,
   Paper,
   Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   CalendarToday as CalendarIcon,
@@ -42,6 +46,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [appointments, setAppointments] = useState([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
+  const [welcomeDialogOpen, setWelcomeDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -52,12 +57,28 @@ export default function DashboardPage() {
   useEffect(() => {
     if (user) {
       fetchAppointments();
+      
+      // Check if this is the user's first login
+      const hasSeenWelcome = localStorage.getItem(`welcome-${user.email}`);
+      if (!hasSeenWelcome) {
+        setWelcomeDialogOpen(true);
+        // Mark that the user has seen the welcome dialog
+        localStorage.setItem(`welcome-${user.email}`, 'true');
+      }
     }
   }, [user]);
 
   const fetchAppointments = async () => {
     try {
-      const response = await appointmentAPI.getAppointments();
+      let response;
+      if (isAdmin) {
+        // Admin sees all appointments
+        response = await appointmentAPI.getAllAppointments();
+      } else {
+        // Regular users see only their own appointments
+        response = await appointmentAPI.getUserAppointments(user.email);
+      }
+      
       if (response.success && response.data) {
         setAppointments(response.data);
       }
@@ -297,7 +318,7 @@ export default function DashboardPage() {
             Dashboard
           </Typography>
           <Typography variant="h6" color="text.secondary">
-            Welcome back, {user.name}!
+            Welcome back, {user.name}! {isAdmin ? 'You have access to all appointments.' : 'Here are your personal appointments.'}
           </Typography>
         </Box>
 
@@ -310,7 +331,7 @@ export default function DashboardPage() {
                   <CalendarIcon sx={{ fontSize: 40, color: 'primary.main', mr: 2 }} />
                   <Box>
                     <Typography color="text.secondary" gutterBottom>
-                      Total Appointments
+                      {isAdmin ? 'Total Appointments' : 'My Appointments'}
                     </Typography>
                     <Typography variant="h4" component="div">
                       {appointments.length}
@@ -328,7 +349,7 @@ export default function DashboardPage() {
                   <ClockIcon sx={{ fontSize: 40, color: 'success.main', mr: 2 }} />
                   <Box>
                     <Typography color="text.secondary" gutterBottom>
-                      Pending
+                      {isAdmin ? 'Pending' : 'My Pending'}
                     </Typography>
                     <Typography variant="h4" component="div">
                       {pendingStatusAppointments.length}
@@ -346,7 +367,7 @@ export default function DashboardPage() {
                   <UsersIcon sx={{ fontSize: 40, color: 'info.main', mr: 2 }} />
                   <Box>
                     <Typography color="text.secondary" gutterBottom>
-                      Completed
+                      {isAdmin ? 'Completed' : 'My Completed'}
                     </Typography>
                     <Typography variant="h4" component="div">
                       {allCompletedAppointments.length}
@@ -364,7 +385,7 @@ export default function DashboardPage() {
                   <CancelIcon sx={{ fontSize: 40, color: 'error.main', mr: 2 }} />
                   <Box>
                     <Typography color="text.secondary" gutterBottom>
-                      Cancelled
+                      {isAdmin ? 'Cancelled' : 'My Cancelled'}
                     </Typography>
                     <Typography variant="h4" component="div">
                       {cancelledAppointments.length}
@@ -400,9 +421,9 @@ export default function DashboardPage() {
         </Box>
 
         {/* Today's Appointments - Side by Side */}
-        <Grid container spacing={4}>
+        <Grid container spacing={2}>
           {/* Upcoming Appointments */}
-          <Grid item xs={12} lg={4}>
+          <Grid item xs={12} md={4}>
             <Card elevation={3} sx={{ height: 'fit-content', minHeight: 400 }}>
               <CardContent sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -477,7 +498,7 @@ export default function DashboardPage() {
           </Grid>
 
           {/* Passed Appointments */}
-          <Grid item xs={12} lg={4}>
+          <Grid item xs={12} md={4}>
             <Card elevation={3} sx={{ height: 'fit-content', minHeight: 400 }}>
               <CardContent sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -540,7 +561,7 @@ export default function DashboardPage() {
           </Grid>
 
           {/* Completed Bookings */}
-          <Grid item xs={12} lg={4}>
+          <Grid item xs={12} md={4}>
             <Card elevation={3} sx={{ height: 'fit-content', minHeight: 400 }}>
               <CardContent sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -617,6 +638,60 @@ export default function DashboardPage() {
           </Grid>
         </Grid>
       </Container>
+
+      {/* Welcome Dialog */}
+      <Dialog
+        open={welcomeDialogOpen}
+        onClose={() => setWelcomeDialogOpen(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            minWidth: 450,
+            maxWidth: 500,
+          },
+        }}
+      >
+        <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+            <span style={{ fontSize: '2.5rem' }}>🎉</span>
+            <Typography variant="h5" component="span" sx={{ fontWeight: 600 }}>
+              Welcome to the System!
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ textAlign: 'center', pb: 2 }}>
+          <Typography variant="h6" color="primary.main" sx={{ mb: 2 }}>
+            Hello, {user?.name}! 👋
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+            We're excited to have you on board! You can now:
+          </Typography>
+          <Box sx={{ textAlign: 'left', pl: 2 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              📅 Book new appointments
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              👀 View your appointment history
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              ⚙️ Manage your profile settings
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              📱 Access your dashboard anytime
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pb: 3, px: 3 }}>
+          <Button
+            onClick={() => setWelcomeDialogOpen(false)}
+            variant="contained"
+            size="large"
+            sx={{ minWidth: 120 }}
+          >
+            Get Started! 🚀
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

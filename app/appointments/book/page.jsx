@@ -31,9 +31,10 @@ import {
   Error
 } from '@mui/icons-material';
 import Link from 'next/link';
+import React from 'react';
 
 export default function BookAppointmentPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState('');
@@ -44,8 +45,27 @@ export default function BookAppointmentPage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm();
+
+  // Auto-complete user details for non-admin users
+  React.useEffect(() => {
+    if (user && !isAdmin) {
+      console.log('🔍 User object for auto-completion:', user);
+      console.log('🔍 Available user fields:', Object.keys(user));
+      
+      // Try different possible field names for the user's name
+      const userName = user.name || user.fullName || user.firstName || user.displayName || user.email?.split('@')[0] || '';
+      const userEmail = user.email || '';
+      
+      console.log('🔍 Mapped userName:', userName);
+      console.log('🔍 Mapped userEmail:', userEmail);
+      
+      setValue('fullName', userName);
+      setValue('email', userEmail);
+    }
+  }, [user, isAdmin, setValue]);
 
   const handleDateSelect = (date) => {
     setSelectedDate(date);
@@ -142,10 +162,13 @@ export default function BookAppointmentPage() {
             </Button>
           </Link>
           <Typography variant="h3" component="h1" gutterBottom>
-            Book Appointment
+            {isAdmin ? 'Book Appointment for Client' : 'Book Your Appointment'}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Select a date and time for your appointment
+            {isAdmin 
+              ? 'Select a date and time and enter client details to book an appointment'
+              : 'Select a date and time for your appointment'
+            }
           </Typography>
         </Box>
 
@@ -249,28 +272,67 @@ export default function BookAppointmentPage() {
                 <Box sx={{ mb: 4 }}>
                   <Typography variant="h6" gutterBottom sx={{ mb: 3, color: 'text.primary', display: 'flex', alignItems: 'center' }}>
                     <Message sx={{ mr: 1.5, color: 'primary.main' }} />
-                    Personal Information
+                    {isAdmin ? 'Appointment Details' : 'Your Information'}
                   </Typography>
+                  
+                  {!isAdmin && (
+                    <Alert severity="info" sx={{ mb: 3 }}>
+                      Your details have been automatically filled in. You can review and proceed to book your appointment.
+                    </Alert>
+                  )}
+                  
+                  {/* User Information Summary for Non-Admin Users */}
+                  {!isAdmin && user && (
+                    <Box sx={{ 
+                      mb: 3, 
+                      p: 3, 
+                      bgcolor: 'success.50', 
+                      borderRadius: 2, 
+                      border: '1px solid',
+                      borderColor: 'success.200'
+                    }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'success.main', mb: 2 }}>
+                        📋 Your Information Summary
+                      </Typography>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="body2" color="text.secondary">
+                            <strong>Name:</strong> {user.name || user.fullName || user.firstName || user.displayName || user.email?.split('@')[0] || 'Not available'}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="body2" color="text.secondary">
+                            <strong>Email:</strong> {user.email || 'Not available'}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  )}
                   
                   <Grid container spacing={3}>
                     {/* Full Name Field */}
                     <Grid item xs={12} sm={6}>
                       <Box sx={{ mb: 2 }}>
                         <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
-                          Full Name *
+                          {isAdmin ? 'Full Name *' : 'Your Full Name'}
                         </Typography>
                         <TextField
                           {...register('fullName', { required: 'Full name is required' })}
                           fullWidth
-                          placeholder="Enter your full name"
+                          placeholder={isAdmin ? "Enter full name" : "Your full name"}
                           variant="outlined"
                           error={!!errors.fullName}
                           helperText={errors.fullName?.message}
+                          disabled={!isAdmin}
                           sx={{
                             '& .MuiOutlinedInput-root': {
                               borderRadius: 2,
                               '&:hover fieldset': {
                                 borderColor: 'primary.main',
+                              },
+                              '&.Mui-disabled': {
+                                backgroundColor: 'action.disabledBackground',
+                                color: 'text.primary',
                               },
                             },
                           }}
@@ -282,7 +344,7 @@ export default function BookAppointmentPage() {
                     <Grid item xs={12} sm={6}>
                       <Box sx={{ mb: 2 }}>
                         <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
-                          Email Address *
+                          {isAdmin ? 'Email Address *' : 'Your Email Address'}
                         </Typography>
                         <TextField
                           {...register('email', { 
@@ -293,15 +355,20 @@ export default function BookAppointmentPage() {
                             }
                           })}
                           fullWidth
-                          placeholder="Enter your email address"
+                          placeholder={isAdmin ? "Enter email address" : "Your email address"}
                           variant="outlined"
                           error={!!errors.email}
                           helperText={errors.email?.message}
+                          disabled={!isAdmin}
                           sx={{
                             '& .MuiOutlinedInput-root': {
                               borderRadius: 2,
                               '&:hover fieldset': {
                                 borderColor: 'primary.main',
+                              },
+                              '&.Mui-disabled': {
+                                backgroundColor: 'action.disabledBackground',
+                                color: 'text.primary',
                               },
                             },
                           }}
@@ -365,10 +432,10 @@ export default function BookAppointmentPage() {
                   {submitting ? (
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <CircularProgress size={20} sx={{ mr: 1, color: 'white' }} />
-                      Booking Appointment...
+                      {isAdmin ? 'Booking Appointment...' : 'Booking Your Appointment...'}
                     </Box>
                   ) : (
-                    'Book Appointment'
+                    isAdmin ? 'Book Appointment for Client' : 'Book Your Appointment'
                   )}
                 </Button>
               </form>
@@ -377,13 +444,19 @@ export default function BookAppointmentPage() {
             {/* Instructions */}
             <Paper elevation={1} sx={{ p: 3, mt: 3, borderRadius: 3 }}>
               <Typography variant="h6" gutterBottom>
-                How to Book
+                {isAdmin ? 'How to Book for Client' : 'How to Book'}
               </Typography>
               <Box component="ol" sx={{ pl: 0, m: 0 }}>
-                {[
+                {isAdmin ? [
                   'Select an available date from the calendar',
                   'Choose an available time slot',
-                  'Fill in your full name and email address',
+                  'Enter the client\'s full name and email address',
+                  'Add any optional notes or special requirements',
+                  'Click "Book Appointment" to confirm'
+                ] : [
+                  'Select an available date from the calendar',
+                  'Choose an available time slot',
+                  'Review your automatically filled information',
                   'Add any optional notes or special requirements',
                   'Click "Book Appointment" to confirm'
                 ].map((step, index) => (

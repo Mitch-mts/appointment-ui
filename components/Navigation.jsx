@@ -14,6 +14,10 @@ import {
   Menu,
   MenuItem,
   Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   CalendarToday as CalendarIcon,
@@ -30,6 +34,7 @@ import { useState } from 'react';
 export default function Navigation() {
   const { user, logout, isAdmin } = useAuth();
   const [anchorEl, setAnchorEl] = useState(null);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   if (!user) return null;
 
@@ -41,9 +46,18 @@ export default function Navigation() {
     setAnchorEl(null);
   };
 
-  const handleLogout = () => {
+  const handleLogoutClick = () => {
     handleMenuClose();
+    setLogoutDialogOpen(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    setLogoutDialogOpen(false);
     logout();
+  };
+
+  const handleLogoutCancel = () => {
+    setLogoutDialogOpen(false);
   };
 
   return (
@@ -138,10 +152,54 @@ export default function Navigation() {
               Profile Settings
             </MenuItem>
             <Divider />
-            <MenuItem onClick={handleLogout} startIcon={<LogoutIcon />}>
+            <MenuItem onClick={handleLogoutClick} startIcon={<LogoutIcon />}>
               Logout
             </MenuItem>
           </Menu>
+
+          {/* Logout Confirmation Dialog */}
+          <Dialog
+            open={logoutDialogOpen}
+            onClose={handleLogoutCancel}
+            PaperProps={{
+              sx: {
+                borderRadius: 2,
+                minWidth: 400,
+              },
+            }}
+          >
+            <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                <span style={{ fontSize: '2rem' }}>🤔</span>
+                <Typography variant="h6" component="span">
+                  Are you sure you want to logout?
+                </Typography>
+              </Box>
+            </DialogTitle>
+            <DialogContent sx={{ textAlign: 'center', pb: 2 }}>
+              <Typography variant="body1" color="text.secondary">
+                You'll need to sign in again to access your account.
+              </Typography>
+            </DialogContent>
+            <DialogActions sx={{ justifyContent: 'center', pb: 3, px: 3 }}>
+              <Button
+                onClick={handleLogoutCancel}
+                variant="outlined"
+                sx={{ minWidth: 100 }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleLogoutConfirm}
+                variant="contained"
+                color="primary"
+                sx={{ minWidth: 100 }}
+                startIcon={<LogoutIcon />}
+              >
+                Logout
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Box>
       </Toolbar>
     </AppBar>

@@ -119,6 +119,20 @@ export const AuthProvider = ({ children }) => {
 
   const isAdmin = user?.role === 'ADMIN';
 
+  // Debug function to check user data structure
+  const debugUserData = () => {
+    console.log('🔍 AuthContext Debug Info:');
+    console.log('Current user state:', user);
+    console.log('User from localStorage:', localStorage.getItem('user'));
+    if (user) {
+      console.log('User fields:', Object.keys(user));
+      console.log('User.name:', user.name);
+      console.log('User.fullName:', user.fullName);
+      console.log('User.email:', user.email);
+      console.log('User.role:', user.role);
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -126,6 +140,7 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     isAdmin,
+    debugUserData, // Add debug function to context
   };
 
   return (

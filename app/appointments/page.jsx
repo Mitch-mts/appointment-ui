@@ -32,7 +32,15 @@ export default function AppointmentsPage() {
 
   const fetchAppointments = async () => {
     try {
-      const response = await appointmentAPI.getAppointments();
+      let response;
+      if (isAdmin) {
+        // Admin sees all appointments
+        response = await appointmentAPI.getAllAppointments();
+      } else {
+        // Regular users see only their own appointments
+        response = await appointmentAPI.getUserAppointments(user.email);
+      }
+      
       if (response.success && response.data) {
         setAppointments(response.data);
       }
@@ -51,6 +59,41 @@ export default function AppointmentsPage() {
       }
     } catch (error) {
       console.error('Error canceling appointment:', error);
+    }
+  };
+
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      const response = await appointmentAPI.updateAppointmentStatus(id, newStatus);
+      if (response && response.success) {
+        // Successfully updated the status, refresh the appointments
+        await fetchAppointments();
+        console.log(`Appointment ${id} status updated to ${newStatus}`);
+      } else {
+        // API call succeeded but returned an error
+        throw new Error(response?.message || 'Failed to update appointment status');
+      }
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+      // Re-throw the error so the AppointmentCard can handle it
+      throw error;
+    }
+  };
+
+  const handleDeleteAppointment = async (id) => {
+    try {
+      const response = await appointmentAPI.deleteAppointment(id);
+      if (response && response.success) {
+        // Successfully deleted the appointment, refresh the list
+        await fetchAppointments();
+        console.log(`Appointment ${id} deleted successfully`);
+      } else {
+        // API call succeeded but returned an error
+        throw new Error(response?.message || 'Failed to delete appointment');
+      }
+    } catch (error) {
+      console.error('Error deleting appointment:', error);
+      throw error;
     }
   };
 
@@ -105,7 +148,7 @@ export default function AppointmentsPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Appointments</h1>
             <p className="mt-2 text-gray-600">
-              {isAdmin ? 'Manage all appointments' : 'View and manage your appointments'}
+              {isAdmin ? 'Manage all appointments across the system' : 'View and manage your personal appointments'}
             </p>
           </div>
           <Link
@@ -159,6 +202,8 @@ export default function AppointmentsPage() {
                 key={appointment.id}
                 appointment={appointment}
                 onCancel={handleCancelAppointment}
+                onStatusChange={handleStatusChange}
+                onDelete={handleDeleteAppointment}
                 showUserInfo={isAdmin}
                 isAdmin={isAdmin}
               />
