@@ -5,10 +5,10 @@ import { useForm } from 'react-hook-form';
 import { useAuth } from '../../../contexts/AuthContext.jsx';
 import { useRouter } from 'next/navigation';
 import Navigation from '../../../components/Navigation.jsx';
-import AppointmentCalendar from '../../../components/Calendar.jsx';
-import { appointmentAPI } from '../../../lib/api.js';
+import AppointmentCalendar from '../../../components/Calendar';
+import { appointmentAPI } from '../../../lib/api';
 import { format } from 'date-fns';
-import { isTimeSlotAvailable } from '../../../lib/utils.js';
+import { isTimeSlotAvailable } from '../../../lib/utils';
 import { 
   Container, 
   Box, 
@@ -171,6 +171,54 @@ export default function BookAppointmentPage() {
             }
           </Typography>
         </Box>
+
+        {/* How to Book Instructions - Moved to top */}
+        <Paper elevation={1} sx={{ p: 3, mb: 4, borderRadius: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            {isAdmin ? 'How to Book for Client' : 'How to Book'}
+          </Typography>
+          <Box component="ol" sx={{ pl: 0, m: 0 }}>
+            {isAdmin ? [
+              'Select an available date from the calendar',
+              'Choose an available time slot',
+              'Enter the client\'s full name and email address',
+              'Add any optional notes or special requirements',
+              'Click "Book Appointment" to confirm'
+            ] : [
+              'Select an available date from the calendar',
+              'Choose an available time slot',
+              'Review your automatically filled information',
+              'Add any optional notes or special requirements',
+              'Click "Book Appointment" to confirm'
+            ].map((step, index) => (
+              <Box
+                key={index}
+                component="li"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  mb: 2,
+                  listStyle: 'none'
+                }}
+              >
+                <Chip
+                  label={index + 1}
+                  size="small"
+                  sx={{
+                    mr: 2,
+                    mt: 0.5,
+                    bgcolor: 'primary.main',
+                    color: 'white',
+                    fontWeight: 'bold'
+                  }}
+                />
+                <Typography variant="body2" color="text.secondary">
+                  {step}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        </Paper>
 
         <Grid container spacing={6}>
           {/* Calendar Section */}
@@ -394,7 +442,7 @@ export default function BookAppointmentPage() {
                       multiline
                       rows={4}
                       fullWidth
-                      placeholder="Add any additional notes, special requirements, or questions for your appointment..."
+                      placeholder="Add booking notes, reason for booking, special requirements, or questions for your appointment..."
                       variant="outlined"
                       sx={{
                         '& .MuiOutlinedInput-root': {
@@ -441,53 +489,7 @@ export default function BookAppointmentPage() {
               </form>
             </Paper>
 
-            {/* Instructions */}
-            <Paper elevation={1} sx={{ p: 3, mt: 3, borderRadius: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                {isAdmin ? 'How to Book for Client' : 'How to Book'}
-              </Typography>
-              <Box component="ol" sx={{ pl: 0, m: 0 }}>
-                {isAdmin ? [
-                  'Select an available date from the calendar',
-                  'Choose an available time slot',
-                  'Enter the client\'s full name and email address',
-                  'Add any optional notes or special requirements',
-                  'Click "Book Appointment" to confirm'
-                ] : [
-                  'Select an available date from the calendar',
-                  'Choose an available time slot',
-                  'Review your automatically filled information',
-                  'Add any optional notes or special requirements',
-                  'Click "Book Appointment" to confirm'
-                ].map((step, index) => (
-                  <Box
-                    key={index}
-                    component="li"
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      mb: 2,
-                      listStyle: 'none'
-                    }}
-                  >
-                    <Chip
-                      label={index + 1}
-                      size="small"
-                      sx={{
-                        mr: 2,
-                        mt: 0.5,
-                        bgcolor: 'primary.main',
-                        color: 'white',
-                        fontWeight: 'bold'
-                      }}
-                    />
-                    <Typography variant="body2" color="text.secondary">
-                      {step}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-            </Paper>
+
           </Grid>
         </Grid>
       </Container>

@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useRouter } from 'next/navigation';
 import Navigation from '../../components/Navigation.jsx';
-import { appointmentAPI } from '../../lib/api.js';
-import { formatDate, formatTime, isToday } from '../../lib/utils.js';
+import { appointmentAPI } from '../../lib/api';
+import { formatDate, formatTime, isToday } from '../../lib/utils';
 import {
   Box,
   Container,
@@ -636,6 +636,8 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </Grid>
+
+
         </Grid>
       </Container>
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { authAPI, userAPI } from '../lib/api.js';
+import { authAPI, userAPI } from '../lib/api';
 
 const AuthContext = createContext(undefined);
 
@@ -117,6 +117,11 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const updateUser = (userData) => {
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
+
   const isAdmin = user?.role === 'ADMIN';
 
   // Debug function to check user data structure
@@ -139,6 +144,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    updateUser,
     isAdmin,
     debugUserData, // Add debug function to context
   };

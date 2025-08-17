@@ -83,8 +83,18 @@ export const userAPI = {
     return response.data;
   },
 
-  updateProfile: async (data) => {
-    const response = await api.put('/users/update', data);
+  updateProfile: async (userId, data) => {
+    const response = await api.put(`/users/update/${userId}`, data);
+    return response.data;
+  },
+
+  changePassword: async (userId, data) => {
+    const response = await api.put(`/users/changePassword/${userId}`, data);
+    return response.data;
+  },
+
+  deleteUser: async (userId) => {
+    const response = await api.delete(`/users/delete/${userId}`);
     return response.data;
   },
 };

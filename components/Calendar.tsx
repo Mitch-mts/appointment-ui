@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Calendar from 'react-calendar';
 import { format, parseISO, isSameDay, isToday, isAfter, startOfDay } from 'date-fns';
-import { appointmentAPI } from '../lib/api.js';
-import { getTimeSlots, getAvailableTimeSlotsForDate, isTimeSlotAvailable } from '../lib/utils.js';
+import { appointmentAPI } from '../lib/api';
+import { getTimeSlots, getAvailableTimeSlotsForDate, isTimeSlotAvailable } from '../lib/utils';
 import { 
   Box, 
   Paper, 
@@ -30,12 +30,18 @@ export default function AppointmentCalendar({
   const [availableDates, setAvailableDates] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Helper function to get the end of current year
+  const getEndOfCurrentYear = () => {
+    const currentYear = new Date().getFullYear();
+    return new Date(currentYear, 11, 31); // December 31st of current year
+  };
+
   useEffect(() => {
     const fetchAvailableDates = async () => {
       setLoading(true);
       try {
         const startDate = format(new Date(), 'yyyy-MM-dd');
-        const endDate = format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'); // 30 days from now
+        const endDate = format(getEndOfCurrentYear(), 'yyyy-MM-dd'); // End of current year
         
         const response = await appointmentAPI.getAvailableDates(startDate, endDate);
         if (response.success && response.data) {
@@ -44,12 +50,14 @@ export default function AppointmentCalendar({
           // If API fails, create mock data for testing
           const mockDates = [];
           const today = new Date();
-          for (let i = 0; i < 30; i++) {
+          const endOfYear = getEndOfCurrentYear();
+          
+          for (let i = 0; i < 365; i++) {
             const date = new Date(today);
             date.setDate(today.getDate() + i);
             
-            // Only add dates that are today or in the future
-            if (isAfter(startOfDay(date), startOfDay(today)) || isToday(date)) {
+            // Only add dates that are today or in the future, but within current year
+            if ((isAfter(startOfDay(date), startOfDay(today)) || isToday(date)) && date <= endOfYear) {
               mockDates.push({
                 date: format(date, 'yyyy-MM-dd'),
                 availableSlots: getAvailableTimeSlotsForDate(date).map(time => ({
@@ -66,12 +74,14 @@ export default function AppointmentCalendar({
         // Create mock data if API fails
         const mockDates = [];
         const today = new Date();
-        for (let i = 0; i < 30; i++) {
+        const endOfYear = getEndOfCurrentYear();
+        
+        for (let i = 0; i < 365; i++) {
           const date = new Date(today);
           date.setDate(today.getDate() + i);
           
-          // Only add dates that are today or in the future
-          if (isAfter(startOfDay(date), startOfDay(today)) || isToday(date)) {
+          // Only add dates that are today or in the future, but within current year
+          if ((isAfter(startOfDay(date), startOfDay(today)) || isToday(date)) && date <= endOfYear) {
             mockDates.push({
               date: format(date, 'yyyy-MM-dd'),
               availableSlots: getAvailableTimeSlotsForDate(date).map(time => ({
@@ -96,25 +106,44 @@ export default function AppointmentCalendar({
       return false;
     }
     
+    // Don't allow dates beyond current year
+    const currentYear = new Date().getFullYear();
+    if (date.getFullYear() > currentYear) {
+      return false;
+    }
+    
     const dateStr = format(date, 'yyyy-MM-dd');
     const availableDate = availableDates.find(d => d.date === dateStr);
     
-    if (!availableDate) return false;
-    
-    // For today, check if there are any available time slots that haven't passed
-    if (isToday(date)) {
-      return availableDate.availableSlots.some(slot => 
-        slot.available && isTimeSlotAvailable(slot.time, date)
-      );
+    // For dates within the next 30 days, require API data
+    const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    if (date <= thirtyDaysFromNow) {
+      if (!availableDate) return false;
+      
+      // For today, check if there are any available time slots that haven't passed
+      if (isToday(date)) {
+        return availableDate.availableSlots.some(slot => 
+          slot.available && isTimeSlotAvailable(slot.time, date)
+        );
+      }
+      
+      // For near future dates, check if there are any available slots
+      return availableDate.availableSlots.some(slot => slot.available);
     }
     
-    // For future dates, check if there are any available slots
-    return availableDate.availableSlots.some(slot => slot.available);
+    // For dates beyond 30 days but within current year, assume they're available
+    return true;
   };
 
   const getAvailableSlotsForDate = (date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     const availableDate = availableDates.find(d => d.date === dateStr);
+    
+    // For dates beyond 30 days but within current year, return all time slots
+    const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    if (date > thirtyDaysFromNow && date.getFullYear() === new Date().getFullYear()) {
+      return getTimeSlots(); // Return all available time slots from utils
+    }
     
     if (!availableDate) return [];
     
@@ -165,14 +194,20 @@ export default function AppointmentCalendar({
         <Typography variant="h6" gutterBottom>
           Select Date
         </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          You can book appointments for the current year only
+        </Typography>
         <Calendar
           onChange={handleDateChange}
           value={selectedDate}
           tileClassName={tileClassName}
           tileDisabled={tileDisabled}
           minDate={new Date()}
-          maxDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)}
+          maxDate={getEndOfCurrentYear()}
           className="w-full border-0"
+          showNavigation={true}
+          showNeighboringMonth={true}
+          locale="en-US"
         />
       </Paper>
 

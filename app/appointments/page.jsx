@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useRouter } from 'next/navigation';
 import Navigation from '../../components/Navigation.jsx';
 import AppointmentCard from '../../components/AppointmentCard.jsx';
-import { appointmentAPI } from '../../lib/api.js';
+import { appointmentAPI } from '../../lib/api';
 import { Plus, Filter } from 'lucide-react';
 import Link from 'next/link';
 
@@ -168,10 +168,10 @@ export default function AppointmentsPage() {
             <div className="flex space-x-2">
               {[
                 { key: 'all', label: 'All' },
-                { key: 'scheduled', label: 'Scheduled' },
+                { key: 'pending', label: 'Pending' },
                 { key: 'completed', label: 'Completed' },
                 { key: 'cancelled', label: 'Cancelled' },
-                { key: 'pending', label: 'Pending' },
+              
               ].map((filterOption) => (
                 <button
                   key={filterOption.key}

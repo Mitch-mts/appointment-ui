@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { formatDate, getStatusColor } from '../lib/utils.js';
+import { formatDate, getStatusColor } from '../lib/utils';
 import { Calendar, Clock, User, Trash2, Edit } from 'lucide-react';
 import {
   Select,
