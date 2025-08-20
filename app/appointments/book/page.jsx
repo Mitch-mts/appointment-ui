@@ -26,10 +26,7 @@ import {
   CalendarToday, 
   Schedule, 
   Message, 
-  ArrowBack,
-  CheckCircle,
-  Error
-} from '@mui/icons-material';
+  ArrowBack} from '@mui/icons-material';
 import Link from 'next/link';
 import React from 'react';
 
@@ -107,7 +104,7 @@ export default function BookAppointmentPage() {
         notes: data.notes || '',
       };
 
-      console.log(appointmentData);
+      console.log("appointmentData: " + appointmentData);
 
       const response = await appointmentAPI.createAppointment(appointmentData);
       if (response.success) {
