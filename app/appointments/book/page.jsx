@@ -107,6 +107,7 @@ export default function BookAppointmentPage() {
       console.log("appointmentData: " + appointmentData);
 
       const response = await appointmentAPI.createAppointment(appointmentData);
+      console.log("response: " + response);
       if (response.success) {
         setSuccess('Appointment booked successfully! Redirecting...');
         setTimeout(() => {
@@ -317,7 +318,7 @@ export default function BookAppointmentPage() {
                 <Box sx={{ mb: 4 }}>
                   <Typography variant="h6" gutterBottom sx={{ mb: 3, color: 'text.primary', display: 'flex', alignItems: 'center' }}>
                     <Message sx={{ mr: 1.5, color: 'primary.main' }} />
-                    {isAdmin ? 'Appointment Details' : 'Your Information'}
+                    {x   ? 'Appointment Details' : 'Your Information'}
                   </Typography>
                   
                   {!isAdmin && (
