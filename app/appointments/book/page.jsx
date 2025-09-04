@@ -170,13 +170,34 @@ export default function BookAppointmentPage() {
           </Typography>
         </Box>
 
-        {/* How to Book Instructions - Moved to top */}
-        <Paper elevation={1} sx={{ p: 3, mb: 4, borderRadius: 3 }}>
-          <Typography variant="h6" gutterBottom>
+        {/* How to Book Instructions - Compact Design */}
+        <Paper 
+          elevation={1} 
+          sx={{ 
+            p: 3, 
+            mb: 3, 
+            borderRadius: 2,
+            bgcolor: 'primary.50',
+            border: '1px solid',
+            borderColor: 'primary.100'
+          }}
+        >
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              fontWeight: 600, 
+              color: 'primary.main',
+              mb: 2,
+              display: 'flex',
+              alignItems: 'center'
+            }}
+          >
+            <CalendarToday sx={{ mr: 1, fontSize: 20 }} />
             {isAdmin ? 'How to Book for Client' : 'How to Book'}
           </Typography>
-          <Box component="ol" sx={{ pl: 0, m: 0 }}>
-            {isAdmin ? [
+          
+          <Box component="ul" sx={{ pl: 0, m: 0, listStyle: 'none' }}>
+            {(isAdmin ? [
               'Select an available date from the calendar',
               'Choose an available time slot',
               'Enter the client\'s full name and email address',
@@ -188,29 +209,27 @@ export default function BookAppointmentPage() {
               'Review your automatically filled information',
               'Add any optional notes or special requirements',
               'Click "Book Appointment" to confirm'
-            ].map((step, index) => (
+            ]).map((step, index) => (
               <Box
                 key={index}
                 component="li"
                 sx={{
                   display: 'flex',
                   alignItems: 'flex-start',
-                  mb: 2,
-                  listStyle: 'none'
+                  mb: 1.5,
+                  '&:last-child': { mb: 0 }
                 }}
               >
-                <Chip
-                  label={index + 1}
-                  size="small"
-                  sx={{
-                    mr: 2,
-                    mt: 0.5,
-                    bgcolor: 'primary.main',
-                    color: 'white',
-                    fontWeight: 'bold'
-                  }}
-                />
-                <Typography variant="body2" color="text.secondary">
+                <Box sx={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  bgcolor: 'primary.main',
+                  mt: 1.5,
+                  mr: 2,
+                  flexShrink: 0
+                }} />
+                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
                   {step}
                 </Typography>
               </Box>
@@ -318,7 +337,7 @@ export default function BookAppointmentPage() {
                 <Box sx={{ mb: 4 }}>
                   <Typography variant="h6" gutterBottom sx={{ mb: 3, color: 'text.primary', display: 'flex', alignItems: 'center' }}>
                     <Message sx={{ mr: 1.5, color: 'primary.main' }} />
-                    {x   ? 'Appointment Details' : 'Your Information'}
+                    {isAdmin  ? 'Appointment Details' : 'Your Information'}
                   </Typography>
                   
                   {!isAdmin && (
