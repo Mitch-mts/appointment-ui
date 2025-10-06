@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import CalendarBackground from './CalendarBackground.jsx';
 import {
   Box,
   Card,
@@ -64,16 +65,17 @@ export default function LoginForm() {
   };
 
   return (
-    <Container component="main" maxWidth="sm">
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          py: 4,
-        }}
-      >
+    <CalendarBackground>
+      <Container component="main" maxWidth="sm">
+        <Box
+          sx={{
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            py: 4,
+          }}
+        >
         <Paper
           elevation={3}
           sx={{
@@ -203,7 +205,8 @@ export default function LoginForm() {
             </Box>
           </Box>
         </Paper>
-      </Box>
-    </Container>
+        </Box>
+      </Container>
+    </CalendarBackground>
   );
 }
