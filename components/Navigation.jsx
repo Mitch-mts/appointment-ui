@@ -25,6 +25,7 @@ import {
   Dashboard as DashboardIcon,
   Event as EventIcon,
   AdminPanelSettings as AdminIcon,
+  Group as UsersIcon,
   Settings as SettingsIcon,
   Logout as LogoutIcon,
   KeyboardArrowDown as ArrowDownIcon,
@@ -94,14 +95,16 @@ export default function Navigation() {
           </Button>
 
           {isAdmin && (
-            <Button
-              component={Link}
-              href="/admin"
-              startIcon={<AdminIcon />}
-              sx={{ color: 'text.secondary' }}
-            >
-              Admin
-            </Button>
+            <>
+              <Button
+                component={Link}
+                href="/admin#users"
+                startIcon={<UsersIcon />}
+                sx={{ color: 'text.secondary' }}
+              >
+                Users
+              </Button>
+            </>
           )}
 
           <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />

@@ -5,17 +5,21 @@ import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useRouter } from 'next/navigation';
 import Navigation from '../../components/Navigation.jsx';
 import AppointmentCard from '../../components/AppointmentCard.jsx';
-import { appointmentAPI } from '../../lib/api';
+import { appointmentAPI, userAPI } from '../../lib/api';
 import { formatDate, formatTime } from '../../lib/utils';
-import { Calendar, Users, Filter, TrendingUp, AlertCircle } from 'lucide-react';
+import { Calendar, Users, Filter, TrendingUp, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function AdminPage() {
   const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
   const [appointments, setAppointments] = useState([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
   const [filter, setFilter] = useState('all');
-  const [stats, setStats] = useState({
+  const [currentUsersPage, setCurrentUsersPage] = useState(1);
+  const [usersPerPage] = useState(9); // 3x3 grid
+  const [stats, setStats] = useState({ 
     total: 0,
     scheduled: 0,
     completed: 0,
@@ -33,6 +37,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (user && isAdmin) {
       fetchAppointments();
+      fetchUsers();
     }
   }, [user, isAdmin]);
 
@@ -55,6 +60,20 @@ export default function AdminPage() {
       console.error('Error fetching appointments:', error);
     } finally {
       setLoadingAppointments(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await userAPI.listUsers();
+      if (response.success && response.data) {
+        setUsers(response.data);
+        setCurrentUsersPage(1); // Reset to first page when users are fetched
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setLoadingUsers(false);
     }
   };
 
@@ -81,6 +100,18 @@ export default function AdminPage() {
         return true;
     }
   });
+
+  // Pagination for users
+  const indexOfLastUser = currentUsersPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
+  const totalUsersPages = Math.ceil(users.length / usersPerPage);
+
+  const handleUsersPageChange = (page) => {
+    setCurrentUsersPage(page);
+    // Scroll to users section when changing pages
+    document.getElementById('users')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   if (loading) {
     return (
@@ -154,69 +185,124 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
-
-        {/* Filter */}
-        <div className="card mb-6">
-          <div className="flex items-center space-x-4">
-            <Filter className="h-5 w-5 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Filter:</span>
-            <div className="flex space-x-2">
-              {[
-                { key: 'all', label: 'All' },
-                { key: 'scheduled', label: 'Scheduled' },
-                { key: 'completed', label: 'Completed' },
-                { key: 'cancelled', label: 'Cancelled' },
-              ].map((filterOption) => (
-                <button
-                  key={filterOption.key}
-                  onClick={() => setFilter(filterOption.key)}
-                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                    filter === filterOption.key
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  {filterOption.label}
-                </button>
-              ))}
+        
+        {/* Users List (Admin only) */}
+        <div id="users" className="mt-12">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Users className="h-6 w-6 text-primary-600" />
+              <h2 className="text-2xl font-semibold text-gray-900">Registered Users</h2>
             </div>
+            {!loadingUsers && users.length > 0 && (
+              <p className="text-sm text-gray-600">
+                Showing {indexOfFirstUser + 1}-{Math.min(indexOfLastUser, users.length)} of {users.length} users
+              </p>
+            )}
           </div>
+
+          {loadingUsers ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Loading users...</p>
+            </div>
+          ) : users && users.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                {currentUsers.map((u) => (
+                  <div key={u.id || u._id || u.email} className="card">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-gray-900 font-medium">{u.fullName || u.name || 'Unknown'}</p>
+                        <p className="text-gray-600 text-sm">{u.email}</p>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        (u.role === 'ADMIN') ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {u.role || 'USER'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Pagination Controls */}
+              {totalUsersPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-6">
+                  <button
+                    onClick={() => handleUsersPageChange(currentUsersPage - 1)}
+                    disabled={currentUsersPage === 1}
+                    className={`flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      currentUsersPage === 1
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                    }`}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </button>
+
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalUsersPages }, (_, i) => i + 1).map((page) => {
+                      // Show first page, last page, current page, and pages around current
+                      if (
+                        page === 1 ||
+                        page === totalUsersPages ||
+                        (page >= currentUsersPage - 1 && page <= currentUsersPage + 1)
+                      ) {
+                        return (
+                          <button
+                            key={page}
+                            onClick={() => handleUsersPageChange(page)}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                              currentUsersPage === page
+                                ? 'bg-primary-600 text-white'
+                                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        );
+                      } else if (
+                        page === currentUsersPage - 2 ||
+                        page === currentUsersPage + 2
+                      ) {
+                        return (
+                          <span key={page} className="px-2 text-gray-500">
+                            ...
+                          </span>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+
+                  <button
+                    onClick={() => handleUsersPageChange(currentUsersPage + 1)}
+                    disabled={currentUsersPage === totalUsersPages}
+                    className={`flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      currentUsersPage === totalUsersPages
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                    }`}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-12">
+              <div className="text-gray-400 mb-4">
+                <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87M16 3.13a4 4 0 110 7.75M8 3.13a4 4 0 110 7.75" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
+              <p className="text-gray-500">There are no registered users to display.</p>
+            </div>
+          )}
         </div>
-
-        {/* Appointments List */}
-        {loadingAppointments ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading appointments...</p>
-          </div>
-        ) : filteredAppointments.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredAppointments.map((appointment) => (
-              <AppointmentCard
-                key={appointment.id}
-                appointment={appointment}
-                onCancel={handleCancelAppointment}
-                showUserInfo={true}
-                isAdmin={true}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-              <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No appointments found</h3>
-            <p className="text-gray-500">
-              {filter === 'all' 
-                ? 'There are no appointments in the system.'
-                : `No ${filter} appointments found.`
-              }
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

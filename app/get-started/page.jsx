@@ -10,7 +10,7 @@ export default function GetStartedPage() {
     if (userType === 'client') {
       router.push('/register');
     } else if (userType === 'admin') {
-      router.push('/admin');
+      router.push('/login');
     }
   };
 
@@ -83,18 +83,6 @@ export default function GetStartedPage() {
           </div>
         </div>
 
-        {/* Additional Info */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-500">
-            Already have an account?{' '}
-            <button
-              onClick={() => router.push('/login')}
-              className="text-primary-600 hover:text-primary-700 font-medium"
-            >
-              Sign in here
-            </button>
-          </p>
-        </div>
       </div>
     </div>
   );

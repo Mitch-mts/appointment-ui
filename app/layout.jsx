@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
   title: 'Appointment Booking System',
-  description: 'A modern appointment booking system built with Next.js',
+  description: 'A modern appointment booking system.',
 }
 
 export default function RootLayout({ children }) {
