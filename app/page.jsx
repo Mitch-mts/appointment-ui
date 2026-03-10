@@ -28,12 +28,21 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <div className="bg-white">
+    <div className="relative min-h-screen overflow-hidden bg-slate-950">
+      {/* Mesh gradient background */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -top-32 -left-16 h-72 w-72 rounded-full bg-sky-500/25 blur-3xl" />
+        <div className="absolute top-40 -right-24 h-80 w-80 rounded-full bg-cyan-400/20 blur-3xl" />
+        <div className="absolute bottom-0 left-10 h-64 w-64 rounded-full bg-emerald-400/20 blur-3xl" />
+        <div className="absolute bottom-[-120px] right-[-40px] h-96 w-96 bg-gradient-to-tr from-sky-500/15 via-indigo-500/10 to-emerald-400/15 opacity-80 blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_55%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.16),_transparent_55%),radial-gradient(circle_at_left,_rgba(59,130,246,0.18),_transparent_55%)]" />
+      </div>
+
+      {/* Foreground content */}
+      <div className="bg-white/80 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center">
-            <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
+            <h1 className="text-4xl font-extrabold text-blue-700 sm:text-5xl md:text-6xl">
               Appointment Booking System
             </h1>
             <p className="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
@@ -55,11 +64,11 @@ export default function HomePage() {
       </div>
 
       {/* Features Section */}
-      <div className="py-12 bg-white">
+      <div className="py-12 bg-white/80 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="lg:text-center">
-            <h2 className="text-base text-primary-600 font-semibold tracking-wide uppercase">Features</h2>
-            <p className="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+            <h2 className="text-base text-blue-700 font-semibold tracking-wide uppercase">Features</h2>
+            <p className="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-blue-800 sm:text-4xl">
               Everything you need to manage appointments
             </p>
           </div>
@@ -70,7 +79,7 @@ export default function HomePage() {
                 <div className="absolute flex items-center justify-center h-12 w-12 rounded-md bg-primary-500 text-white">
                   <Calendar className="h-6 w-6" />
                 </div>
-                <p className="ml-16 text-lg leading-6 font-medium text-gray-900">Easy Scheduling</p>
+                <p className="ml-16 text-lg leading-6 font-medium text-blue-800">Easy Scheduling</p>
                 <p className="mt-2 ml-16 text-base text-gray-500">
                   Book appointments with just a few clicks. View available time slots and select the perfect time for your needs.
                 </p>
@@ -80,7 +89,7 @@ export default function HomePage() {
                 <div className="absolute flex items-center justify-center h-12 w-12 rounded-md bg-primary-500 text-white">
                   <Clock className="h-6 w-6" />
                 </div>
-                <p className="ml-16 text-lg leading-6 font-medium text-gray-900">Real-time Availability</p>
+                <p className="ml-16 text-lg leading-6 font-medium text-blue-800">Real-time Availability</p>
                 <p className="mt-2 ml-16 text-base text-gray-500">
                   See real-time availability and get instant confirmation for your appointments.
                 </p>
@@ -90,7 +99,7 @@ export default function HomePage() {
                 <div className="absolute flex items-center justify-center h-12 w-12 rounded-md bg-primary-500 text-white">
                   <Users className="h-6 w-6" />
                 </div>
-                <p className="ml-16 text-lg leading-6 font-medium text-gray-900">User Management</p>
+                <p className="ml-16 text-lg leading-6 font-medium text-blue-800">User Management</p>
                 <p className="mt-2 ml-16 text-base text-gray-500">
                   Manage your profile, view appointment history, and cancel or reschedule appointments easily.
                 </p>
@@ -100,7 +109,7 @@ export default function HomePage() {
                 <div className="absolute flex items-center justify-center h-12 w-12 rounded-md bg-primary-500 text-white">
                   <Shield className="h-6 w-6" />
                 </div>
-                <p className="ml-16 text-lg leading-6 font-medium text-gray-900">Admin Controls</p>
+                <p className="ml-16 text-lg leading-6 font-medium text-blue-800">Admin Controls</p>
                 <p className="mt-2 ml-16 text-base text-gray-500">
                   Comprehensive admin panel to manage all appointments, users, and system settings.
                 </p>
