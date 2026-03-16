@@ -309,8 +309,24 @@ export default function DashboardPage() {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
-      <Navigation />
+    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900">
+      {/* Soft illustration-style background to match landing/auth pages */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl" />
+        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl" />
+        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl" />
+        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50" />
+      </div>
+
+      <Box
+        sx={{
+          minHeight: '100vh',
+          backgroundColor: 'transparent',
+          position: 'relative',
+          zIndex: 10,
+        }}
+      >
+        <Navigation />
       
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Box sx={{ mb: 4 }}>
@@ -694,6 +710,7 @@ export default function DashboardPage() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+      </Box>
+    </div>
   );
 }

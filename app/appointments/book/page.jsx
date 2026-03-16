@@ -126,17 +126,9 @@ export default function BookAppointmentPage() {
 
   if (loading) {
     return (
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: 'grey.50'
-        }}
-      >
-        <CircularProgress size={60} />
-      </Box>
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400"></div>
+      </div>
     );
   }
 
@@ -146,10 +138,18 @@ export default function BookAppointmentPage() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
+    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900">
+      {/* Soft illustration-style background to match landing/auth pages */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl" />
+        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl" />
+        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl" />
+        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50" />
+      </div>
+
       <Navigation />
       
-      <Container maxWidth="xl" sx={{ py: 4, px: 2 }}>
+      <Container maxWidth="xl" sx={{ py: 4, px: 2, position: 'relative', zIndex: 10 }}>
         <Box sx={{ mb: 4 }}>
           <Link href="/appointments" style={{ textDecoration: 'none' }}>
             <Button
@@ -510,6 +510,6 @@ export default function BookAppointmentPage() {
           </Grid>
         </Grid>
       </Container>
-    </Box>
+    </div>
   );
 }

@@ -62,7 +62,16 @@ export default function Navigation() {
   };
 
   return (
-    <AppBar position="static" elevation={1} sx={{ backgroundColor: 'white', color: 'text.primary' }}>
+    <AppBar
+      position="static"
+      elevation={1}
+      sx={{
+        backgroundColor: 'rgba(255,255,255,0.9)',
+        backdropFilter: 'blur(12px)',
+        color: 'text.primary',
+        borderBottom: '1px solid rgba(148,163,184,0.25)',
+      }}
+    >
       <Toolbar>
         <Link href="/dashboard" style={{ textDecoration: 'none', color: 'inherit' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
