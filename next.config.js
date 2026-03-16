@@ -4,8 +4,8 @@ const nextConfig = {
     domains: ['localhost'],
   },
   async rewrites() {
-    // Proxy all frontend `/api/*` calls to the Java backend,
-    // keeping browser requests same-origin (supports HTTPS frontend + HTTP backend).
+    // Match the original API base behaviour:
+    // previously axios used NEXT_PUBLIC_API_URL || 'http://localhost:8079/v1'.
     const backendBase =
       process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8079/v1';
 
