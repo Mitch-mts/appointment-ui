@@ -9,7 +9,7 @@ const nextConfig = {
     const backendBase =
       process.env.BACKEND_URL ||
       process.env.NEXT_PUBLIC_API_URL ||
-      'http://localhost:8079/v1';
+      'http://192.168.100.11:8079/v1';
 
     return [
       {
