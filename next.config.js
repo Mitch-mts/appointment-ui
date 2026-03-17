@@ -7,7 +7,9 @@ const nextConfig = {
     // Match the original API base behaviour:
     // previously axios used NEXT_PUBLIC_API_URL || 'http://localhost:8079/v1'.
     const backendBase =
-      process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8079/v1';
+      process.env.BACKEND_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      'http://localhost:8079/v1';
 
     return [
       {
