@@ -24,7 +24,6 @@ import {
   Person as PersonIcon,
   Dashboard as DashboardIcon,
   Event as EventIcon,
-  AdminPanelSettings as AdminIcon,
   Group as UsersIcon,
   Settings as SettingsIcon,
   Logout as LogoutIcon,
@@ -107,11 +106,18 @@ export default function Navigation() {
             <>
               <Button
                 component={Link}
-                href="/admin#users"
+                href="/admin/users"
                 startIcon={<UsersIcon />}
                 sx={{ color: 'text.secondary' }}
               >
                 Users
+              </Button>
+              <Button
+                component={Link}
+                href="/admin/providers"
+                sx={{ color: 'text.secondary' }}
+              >
+                Providers
               </Button>
             </>
           )}

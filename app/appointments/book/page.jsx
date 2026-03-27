@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../../../contexts/AuthContext.jsx';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Navigation from '../../../components/Navigation.jsx';
 import AppointmentCalendar from '../../../components/Calendar';
 import { appointmentAPI } from '../../../lib/api';
+import { getProviders, getProviderById } from '../../../lib/providers.js';
 import { format } from 'date-fns';
 import { isTimeSlotAvailable } from '../../../lib/utils';
 import { 
@@ -19,8 +20,15 @@ import {
   Button, 
   Alert, 
   CircularProgress,
-  Chip,
-  Divider
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select
 } from '@mui/material';
 import { 
   CalendarToday, 
@@ -33,11 +41,16 @@ import React from 'react';
 export default function BookAppointmentPage() {
   const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [providers, setProviders] = useState([]);
+  const [selectedProviderId, setSelectedProviderId] = useState('');
+
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmData, setConfirmData] = useState(null);
 
   const {
     register,
@@ -64,6 +77,18 @@ export default function BookAppointmentPage() {
     }
   }, [user, isAdmin, setValue]);
 
+  useEffect(() => {
+    const loadedProviders = getProviders();
+    setProviders(loadedProviders);
+  }, []);
+
+  useEffect(() => {
+    if (providers.length === 0) return;
+    const queryProviderId = searchParams?.get('providerId');
+    const hasQueryProvider = providers.some((p) => p.id === queryProviderId);
+    setSelectedProviderId(hasQueryProvider ? queryProviderId : providers[0].id);
+  }, [providers, searchParams]);
+
   const handleDateSelect = (date) => {
     setSelectedDate(date);
     setSelectedTime(''); // Reset time when date changes
@@ -73,7 +98,8 @@ export default function BookAppointmentPage() {
     setSelectedTime(time);
   };
 
-  const onSubmit = async (data) => {
+  const handlePreviewSubmit = (data) => {
+    const selectedProvider = getProviderById(selectedProviderId);
     if (!selectedDate || !selectedTime) {
       setError('Please select a date and time');
       return;
@@ -91,36 +117,81 @@ export default function BookAppointmentPage() {
       return;
     }
 
+    if (!selectedProvider) {
+      setError('Please select a provider');
+      return;
+    }
+
     setError('');
-    setSuccess('');
+    setConfirmData(data);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmAppointment = async () => {
+    if (!confirmData) return;
+    const selectedProvider = getProviderById(selectedProviderId);
+
+    if (!selectedProvider || !selectedDate || !selectedTime) {
+      setError('Please complete provider, date, and time selection.');
+      setConfirmOpen(false);
+      return;
+    }
+
     setSubmitting(true);
+    setError('');
+
+    let didSucceed = false;
 
     try {
+      const providerNotes = isAdmin
+        ? [
+            `Provider: ${selectedProvider.name}`,
+            `Service: ${selectedProvider.service}`,
+            `Location: ${selectedProvider.location}`,
+          ].join('\n')
+        : `Provider: ${selectedProvider.name}`;
+
+      const notesParts = [providerNotes];
+      if (confirmData.notes) {
+        notesParts.push(`Additional notes: ${confirmData.notes}`);
+      }
+
       const appointmentData = {
         date: format(selectedDate, 'yyyy-MM-dd'),
         time: selectedTime,
-        fullName: data.fullName,
-        email: data.email,
-        notes: data.notes || '',
+        fullName: confirmData.fullName,
+        email: confirmData.email,
+        notes: notesParts.join('\n\n'),
       };
 
-      console.log("appointmentData: " + appointmentData);
-
       const response = await appointmentAPI.createAppointment(appointmentData);
-      console.log("response: " + response);
-      if (response.success) {
-        setSuccess('Appointment booked successfully! Redirecting...');
-        setTimeout(() => {
-          router.push('/appointments?success=true');
-        }, 2000);
-      } else {
-        setError(response.message || 'Failed to book appointment');
+
+      if (response?.success) {
+        didSucceed = true;
+        const created = response.data || {};
+        const referenceNumber =
+          created.referenceNumber ||
+          created.reference ||
+          response.referenceNumber ||
+          '';
+
+        router.push(
+          `/appointments/confirmation?referenceNumber=${encodeURIComponent(
+            referenceNumber || '—'
+          )}&providerId=${encodeURIComponent(selectedProviderId)}&date=${encodeURIComponent(
+            format(selectedDate, 'yyyy-MM-dd')
+          )}&time=${encodeURIComponent(selectedTime)}`
+        );
+        return;
       }
+
+      setError(response?.message || 'Failed to book appointment');
     } catch (err) {
       console.error('Booking error:', err);
       setError('An error occurred. Please try again.');
     } finally {
       setSubmitting(false);
+      setConfirmOpen(!didSucceed);
     }
   };
 
@@ -163,10 +234,9 @@ export default function BookAppointmentPage() {
             {isAdmin ? 'Book Appointment for Client' : 'Book Your Appointment'}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            {isAdmin 
-              ? 'Select a date and time and enter client details to book an appointment'
-              : 'Select a date and time for your appointment'
-            }
+            {isAdmin
+              ? 'Select a provider, then pick a date and time for the client'
+              : 'Select a provider, then pick a date and time for your appointment'}
           </Typography>
         </Box>
 
@@ -198,17 +268,19 @@ export default function BookAppointmentPage() {
           
           <Box component="ul" sx={{ pl: 0, m: 0, listStyle: 'none' }}>
             {(isAdmin ? [
+              'Select a provider',
               'Select an available date from the calendar',
               'Choose an available time slot',
               'Enter the client\'s full name and email address',
               'Add any optional notes or special requirements',
-              'Click "Book Appointment" to confirm'
+              'Review and confirm your appointment'
             ] : [
+              'Select a provider',
               'Select an available date from the calendar',
               'Choose an available time slot',
               'Review your automatically filled information',
               'Add any optional notes or special requirements',
-              'Click "Book Appointment" to confirm'
+              'Review and confirm your appointment'
             ]).map((step, index) => (
               <Box
                 key={index}
@@ -262,13 +334,57 @@ export default function BookAppointmentPage() {
                 </Alert>
               )}
 
-              {success && (
-                <Alert severity="success" sx={{ mb: 3 }}>
-                  {success}
-                </Alert>
-              )}
+              <form onSubmit={handleSubmit(handlePreviewSubmit)}>
+                {/* Provider Selection */}
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="h6" gutterBottom sx={{ mb: 2, color: 'text.primary' }}>
+                    Provider
+                  </Typography>
 
-              <form onSubmit={handleSubmit(onSubmit)}>
+                  <FormControl fullWidth>
+                    <InputLabel id="provider-select-label">Choose provider</InputLabel>
+                    <Select
+                      labelId="provider-select-label"
+                      value={selectedProviderId}
+                      label="Choose provider"
+                      onChange={(e) => setSelectedProviderId(e.target.value)}
+                    >
+                      {providers.map((p) => (
+                        <MenuItem key={p.id} value={p.id}>
+                          {p.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  {getProviderById(selectedProviderId) && (
+                    <Box
+                      sx={{
+                        mt: 3,
+                        p: 3,
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: 'background.paper',
+                      }}
+                    >
+                      <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1 }}>
+                        {getProviderById(selectedProviderId)?.name}
+                      </Typography>
+                      {isAdmin && (
+                        <>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                            <strong>Service:</strong> {getProviderById(selectedProviderId)?.service}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            <strong>Location:</strong> {getProviderById(selectedProviderId)?.location}
+                          </Typography>
+                        </>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+
                 {/* Selected Date and Time Display - Side by Side */}
                 <Box sx={{ mb: 4 }}>
                   <Typography variant="h6" gutterBottom sx={{ mb: 2, color: 'text.primary' }}>
@@ -479,7 +595,9 @@ export default function BookAppointmentPage() {
                   variant="contained"
                   size="large"
                   fullWidth
-                  disabled={!selectedDate || !selectedTime || submitting}
+                  disabled={
+                    !selectedProviderId || !selectedDate || !selectedTime || submitting || confirmOpen
+                  }
                   sx={{ 
                     py: 2, 
                     borderRadius: 2,
@@ -497,13 +615,98 @@ export default function BookAppointmentPage() {
                   {submitting ? (
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <CircularProgress size={20} sx={{ mr: 1, color: 'white' }} />
-                      {isAdmin ? 'Booking Appointment...' : 'Booking Your Appointment...'}
+                      Confirming...
                     </Box>
                   ) : (
-                    isAdmin ? 'Book Appointment for Client' : 'Book Your Appointment'
+                    isAdmin ? 'Confirm Appointment for Client' : 'Confirm Appointment'
                   )}
                 </Button>
               </form>
+
+              <Dialog
+                open={confirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                PaperProps={{
+                  sx: {
+                    borderRadius: 3,
+                    minWidth: 420,
+                    maxWidth: 520,
+                  },
+                }}
+              >
+                <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
+                  Review & confirm
+                </DialogTitle>
+
+                <DialogContent sx={{ pt: 2 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 900, mb: 1 }}>
+                    {getProviderById(selectedProviderId)?.name}
+                  </Typography>
+
+                  {isAdmin && (
+                    <>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        <strong>Service:</strong> {getProviderById(selectedProviderId)?.service}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        <strong>Location:</strong> {getProviderById(selectedProviderId)?.location}
+                      </Typography>
+                    </>
+                  )}
+
+                  <Divider sx={{ my: 2 }} />
+
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    <strong>Date:</strong>{' '}
+                    {selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '—'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    <strong>Time:</strong> {selectedTime || '—'}
+                  </Typography>
+
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                      <strong>Name:</strong> {confirmData?.fullName || '—'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      <strong>Email:</strong> {confirmData?.email || '—'}
+                    </Typography>
+                  </Box>
+
+                  {confirmData?.notes && (
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>Notes:</strong> {confirmData.notes}
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {error && (
+                    <Alert severity="error" sx={{ mt: 2 }}>
+                      {error}
+                    </Alert>
+                  )}
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, pb: 2, pt: 0 }}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => setConfirmOpen(false)}
+                    disabled={submitting}
+                    sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    variant="contained"
+                    onClick={handleConfirmAppointment}
+                    disabled={submitting}
+                    sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
+                  >
+                    {submitting ? 'Confirming...' : 'Confirm appointment'}
+                  </Button>
+                </DialogActions>
+              </Dialog>
             </Paper>
 
 

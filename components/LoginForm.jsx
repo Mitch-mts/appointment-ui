@@ -45,7 +45,7 @@ export default function LoginForm() {
     try {
       const result = await login(data.email, data.password);
       if (result.success) {
-        setSuccess('Login successful! Redirecting to dashboard...');
+        setSuccess('Login successful! Redirecting...');
         // Redirect after a brief delay to show success message
         setTimeout(() => {
           router.push('/dashboard');
