@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -15,18 +16,18 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { DeleteOutline } from '@mui/icons-material';
 import Navigation from '../../../components/Navigation.jsx';
+import ProviderAvailabilityPicker from '../../../components/ProviderAvailabilityPicker.jsx';
 import { useAuth } from '../../../contexts/AuthContext.jsx';
 import {
-  addProvider,
-  getProviders,
-  removeProvider,
-  updateProvider,
+  providerAPI,
+  providerDisplayName,
 } from '../../../lib/providers.js';
 
 const EMPTY_FORM = {
-  name: '',
-  location: '',
+  title: '',
+  fullName: '',
   service: '',
   availability: '',
 };
@@ -35,9 +36,31 @@ export default function AdminProvidersPage() {
   const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
   const [providers, setProviders] = useState([]);
+  const [listLoading, setListLoading] = useState(true);
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState('');
   const [editingProvider, setEditingProvider] = useState(null);
+  const [providerToDelete, setProviderToDelete] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const loadProviders = useCallback(async () => {
+    setListLoading(true);
+    setError('');
+    try {
+      const res = await providerAPI.listProviders();
+      if (res?.success && Array.isArray(res.data)) {
+        setProviders(res.data);
+      } else {
+        setError(res?.message || 'Could not load providers.');
+        setProviders([]);
+      }
+    } catch {
+      setError('Could not load providers. Please try again.');
+      setProviders([]);
+    } finally {
+      setListLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -48,11 +71,16 @@ export default function AdminProvidersPage() {
   }, [loading, user, isAdmin, router]);
 
   useEffect(() => {
-    setProviders(getProviders());
-  }, []);
+    if (user && isAdmin) {
+      loadProviders();
+    }
+  }, [user, isAdmin, loadProviders]);
 
   const sortedProviders = useMemo(
-    () => [...providers].sort((a, b) => a.name.localeCompare(b.name)),
+    () =>
+      [...providers].sort((a, b) =>
+        (a.fullName || '').localeCompare(b.fullName || '')
+      ),
     [providers]
   );
 
@@ -62,39 +90,50 @@ export default function AdminProvidersPage() {
 
   const validate = (values) => {
     if (
-      !values.name.trim() ||
-      !values.location.trim() ||
-      !values.service.trim() ||
-      !values.availability.trim()
+      !values.title?.trim() ||
+      !values.fullName?.trim() ||
+      !values.service?.trim() ||
+      !values.availability?.trim()
     ) {
-      return 'Name, location, service, and availability are required.';
+      return 'Title, full name, service, and availability are required.';
     }
     return '';
   };
 
-  const handleAddProvider = () => {
+  const handleAddProvider = async () => {
     const validationError = validate(form);
     if (validationError) {
       setError(validationError);
       return;
     }
 
-    const newProvider = {
-      id: `p${Date.now()}`,
-      name: form.name.trim(),
-      location: form.location.trim(),
-      service: form.service.trim(),
-      availability: form.availability.trim(),
-    };
-
-    const next = addProvider(newProvider);
-    setProviders(next);
-    setForm(EMPTY_FORM);
+    setSaving(true);
     setError('');
+    try {
+      const payload = {
+        title: form.title.trim(),
+        fullName: form.fullName.trim(),
+        service: form.service.trim(),
+        availability: form.availability.trim(),
+      };
+      const res = await providerAPI.createProvider(payload);
+      if (res?.success && res.data) {
+        setProviders((prev) => [...prev, res.data]);
+        setForm(EMPTY_FORM);
+      } else {
+        setError(res?.message || 'Failed to add provider.');
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.message || 'Failed to add provider. Please try again.'
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleOpenEdit = (provider) => {
-    setEditingProvider(provider);
+    setEditingProvider({ ...provider });
     setError('');
   };
 
@@ -102,7 +141,7 @@ export default function AdminProvidersPage() {
     setEditingProvider((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingProvider) return;
     const validationError = validate(editingProvider);
     if (validationError) {
@@ -110,24 +149,61 @@ export default function AdminProvidersPage() {
       return;
     }
 
-    const next = updateProvider(editingProvider.id, {
-      name: editingProvider.name.trim(),
-      location: editingProvider.location.trim(),
-      service: editingProvider.service.trim(),
-      availability: editingProvider.availability.trim(),
-    });
-    setProviders(next);
-    setEditingProvider(null);
+    setSaving(true);
     setError('');
+    try {
+      const id = editingProvider.id;
+      const payload = {
+        title: editingProvider.title.trim(),
+        fullName: editingProvider.fullName.trim(),
+        service: editingProvider.service.trim(),
+        availability: editingProvider.availability.trim(),
+      };
+      const res = await providerAPI.updateProvider(id, payload);
+      if (res?.success && res.data) {
+        setProviders((prev) =>
+          prev.map((p) => (p.id === id ? res.data : p))
+        );
+        setEditingProvider(null);
+      } else {
+        setError(res?.message || 'Failed to update provider.');
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          'Failed to update provider. Please try again.'
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleDeleteProvider = (providerId) => {
-    const shouldDelete = window.confirm(
-      'Are you sure you want to remove this provider? This action cannot be undone.'
-    );
-    if (!shouldDelete) return;
-    const next = removeProvider(providerId);
-    setProviders(next);
+  const handleCloseDeleteDialog = () => {
+    if (!saving) setProviderToDelete(null);
+  };
+
+  const handleConfirmDeleteProvider = async () => {
+    if (!providerToDelete) return;
+    const providerId = providerToDelete.id;
+
+    setSaving(true);
+    setError('');
+    try {
+      const res = await providerAPI.deleteProvider(providerId);
+      if (res?.success) {
+        setProviders((prev) => prev.filter((p) => p.id !== providerId));
+        setProviderToDelete(null);
+      } else {
+        setError(res?.message || 'Failed to remove provider.');
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          'Failed to remove provider. Please try again.'
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -173,23 +249,24 @@ export default function AdminProvidersPage() {
           )}
 
           <Grid container spacing={2}>
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
-                label="Provider name"
-                value={form.name}
-                onChange={(e) => handleFormChange('name', e.target.value)}
+                label="Title"
+                placeholder="e.g. Dr."
+                value={form.title}
+                onChange={(e) => handleFormChange('title', e.target.value)}
               />
             </Grid>
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
-                label="Location"
-                value={form.location}
-                onChange={(e) => handleFormChange('location', e.target.value)}
+                label="Full name"
+                value={form.fullName}
+                onChange={(e) => handleFormChange('fullName', e.target.value)}
               />
             </Grid>
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
                 label="Service"
@@ -197,13 +274,12 @@ export default function AdminProvidersPage() {
                 onChange={(e) => handleFormChange('service', e.target.value)}
               />
             </Grid>
-            <Grid item xs={12} md={3}>
-              <TextField
-                fullWidth
-                label="Availability"
-                placeholder="e.g. Mon-Fri, 09:00-17:00"
+            <Grid item xs={12}>
+              <ProviderAvailabilityPicker
+                idPrefix="add-provider"
                 value={form.availability}
-                onChange={(e) => handleFormChange('availability', e.target.value)}
+                onChange={(next) => handleFormChange('availability', next)}
+                disabled={saving}
               />
             </Grid>
           </Grid>
@@ -212,71 +288,246 @@ export default function AdminProvidersPage() {
             <Button
               variant="contained"
               onClick={handleAddProvider}
+              disabled={saving}
               sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
             >
-              Add provider
+              {saving ? (
+                <CircularProgress size={22} color="inherit" />
+              ) : (
+                'Add provider'
+              )}
             </Button>
           </Box>
         </Paper>
 
-        <Grid container spacing={3}>
-          {sortedProviders.map((provider) => (
-            <Grid item xs={12} md={6} lg={4} key={provider.id}>
-              <Paper elevation={2} sx={{ p: 3, borderRadius: 3, height: '100%' }}>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  {provider.name}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  <strong>Location:</strong> {provider.location}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  <strong>Service:</strong> {provider.service}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  <strong>Availability:</strong> {provider.availability || 'Not set'}
-                </Typography>
-                <Box sx={{ mt: 2 }}>
-                  <Button
-                    variant="outlined"
-                    onClick={() => handleOpenEdit(provider)}
-                    sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
+        {listLoading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <Grid container spacing={3}>
+            {sortedProviders.map((provider) => (
+              <Grid item xs={12} md={6} lg={4} key={provider.id}>
+                <Paper
+                  elevation={2}
+                  sx={{ p: 3, borderRadius: 3, height: '100%' }}
+                >
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                    {providerDisplayName(provider)}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 1 }}
                   >
-                    Edit provider
-                  </Button>
-                  <Button
-                    color="error"
-                    variant="text"
-                    onClick={() => handleDeleteProvider(provider.id)}
-                    sx={{ ml: 1, borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
+                    <strong>Status:</strong> {provider.status || '—'}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 0.5 }}
                   >
-                    Remove
-                  </Button>
-                </Box>
-              </Paper>
-            </Grid>
-          ))}
-        </Grid>
+                    <strong>Service:</strong> {provider.service}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 0.5 }}
+                  >
+                    <strong>Availability:</strong>{' '}
+                    {provider.availability || 'Not set'}
+                  </Typography>
+                  <Box sx={{ mt: 2 }}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => handleOpenEdit(provider)}
+                      disabled={saving}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Edit provider
+                    </Button>
+                    <Button
+                      color="error"
+                      variant="text"
+                      onClick={() => setProviderToDelete(provider)}
+                      disabled={saving}
+                      sx={{
+                        ml: 1,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </Box>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+        )}
       </main>
 
       <Dialog
+        open={Boolean(providerToDelete)}
+        onClose={handleCloseDeleteDialog}
+        aria-labelledby="delete-provider-dialog-title"
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            maxWidth: 440,
+            width: '100%',
+            overflow: 'hidden',
+            background:
+              'linear-gradient(165deg, rgba(224, 242, 254, 0.95) 0%, #ffffff 42%, #f8fafc 100%)',
+            border: '1px solid',
+            borderColor: 'rgba(14, 165, 233, 0.22)',
+            boxShadow:
+              '0 25px 50px -12px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(255,255,255,0.6) inset',
+          },
+        }}
+        slotProps={{
+          backdrop: {
+            sx: {
+              backgroundColor: 'rgba(15, 23, 42, 0.35)',
+              backdropFilter: 'blur(4px)',
+            },
+          },
+        }}
+      >
+        <DialogTitle
+          id="delete-provider-dialog-title"
+          sx={{
+            pt: 3,
+            pb: 1.5,
+            px: 3,
+            borderBottom: '1px solid',
+            borderColor: 'rgba(14, 165, 233, 0.12)',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+            <Box
+              sx={{
+                flexShrink: 0,
+                width: 48,
+                height: 48,
+                borderRadius: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background:
+                  'linear-gradient(145deg, rgba(254, 226, 226, 0.95) 0%, rgba(252, 165, 165, 0.35) 100%)',
+                border: '1px solid',
+                borderColor: 'rgba(239, 68, 68, 0.25)',
+              }}
+            >
+              <DeleteOutline sx={{ fontSize: 28, color: 'error.main' }} />
+            </Box>
+            <Box sx={{ pt: 0.25 }}>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: 'text.primary' }}>
+                Remove this provider?
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, lineHeight: 1.5 }}>
+                They will be removed from the directory and will no longer appear when booking
+                appointments.
+              </Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ px: 3, pt: 2.5, pb: 1 }}>
+          <Paper
+            elevation={0}
+            sx={{
+              px: 2,
+              py: 1.5,
+              borderRadius: 2,
+              bgcolor: 'rgba(255, 255, 255, 0.7)',
+              border: '1px solid',
+              borderColor: 'rgba(148, 163, 184, 0.35)',
+            }}
+          >
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+              Provider
+            </Typography>
+            <Typography variant="body1" sx={{ fontWeight: 700, mt: 0.25 }}>
+              {providerToDelete ? providerDisplayName(providerToDelete) : ''}
+            </Typography>
+            {providerToDelete?.service && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                {providerToDelete.service}
+              </Typography>
+            )}
+          </Paper>
+          <Typography variant="caption" color="error.main" sx={{ display: 'block', mt: 2 }}>
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions
+          sx={{
+            px: 3,
+            pb: 2.5,
+            pt: 0,
+            gap: 1,
+            flexWrap: 'wrap',
+            justifyContent: 'flex-end',
+          }}
+        >
+          <Button
+            variant="outlined"
+            onClick={handleCloseDeleteDialog}
+            disabled={saving}
+            sx={{
+              borderRadius: 2,
+              fontWeight: 700,
+              borderColor: 'rgba(14, 165, 233, 0.45)',
+              color: 'primary.main',
+              '&:hover': {
+                borderColor: 'primary.main',
+                bgcolor: 'rgba(14, 165, 233, 0.06)',
+              },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleConfirmDeleteProvider}
+            disabled={saving}
+            sx={{
+              borderRadius: 2,
+              fontWeight: 700,
+              boxShadow: '0 4px 14px rgba(239, 68, 68, 0.35)',
+            }}
+          >
+            {saving ? <CircularProgress size={22} color="inherit" /> : 'Remove provider'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
         open={Boolean(editingProvider)}
-        onClose={() => setEditingProvider(null)}
-        PaperProps={{ sx: { borderRadius: 3, minWidth: 460 } }}
+        onClose={() => !saving && setEditingProvider(null)}
+        PaperProps={{ sx: { borderRadius: 3, minWidth: { xs: '100%', sm: 520 } } }}
       >
         <DialogTitle>Edit provider</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 1, display: 'grid', gap: 2 }}>
             <TextField
               fullWidth
-              label="Provider name"
-              value={editingProvider?.name || ''}
-              onChange={(e) => handleEditFieldChange('name', e.target.value)}
+              label="Title"
+              value={editingProvider?.title || ''}
+              onChange={(e) => handleEditFieldChange('title', e.target.value)}
             />
             <TextField
               fullWidth
-              label="Location"
-              value={editingProvider?.location || ''}
-              onChange={(e) => handleEditFieldChange('location', e.target.value)}
+              label="Full name"
+              value={editingProvider?.fullName || ''}
+              onChange={(e) => handleEditFieldChange('fullName', e.target.value)}
             />
             <TextField
               fullWidth
@@ -284,24 +535,27 @@ export default function AdminProvidersPage() {
               value={editingProvider?.service || ''}
               onChange={(e) => handleEditFieldChange('service', e.target.value)}
             />
-            <TextField
-              fullWidth
-              label="Availability"
+            <ProviderAvailabilityPicker
+              idPrefix="edit-provider"
               value={editingProvider?.availability || ''}
-              onChange={(e) => handleEditFieldChange('availability', e.target.value)}
+              onChange={(next) => handleEditFieldChange('availability', next)}
+              disabled={saving}
             />
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setEditingProvider(null)} variant="outlined">
+          <Button
+            onClick={() => setEditingProvider(null)}
+            variant="outlined"
+            disabled={saving}
+          >
             Cancel
           </Button>
-          <Button onClick={handleSaveEdit} variant="contained">
-            Save
+          <Button onClick={handleSaveEdit} variant="contained" disabled={saving}>
+            {saving ? <CircularProgress size={22} /> : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>
     </div>
   );
 }
-

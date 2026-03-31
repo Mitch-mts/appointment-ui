@@ -1,12 +1,15 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { parseISO, format } from 'date-fns';
-import { Button } from '@mui/material';
+import { Button, CircularProgress } from '@mui/material';
 import Navigation from '../../../components/Navigation.jsx';
 import { useAuth } from '../../../contexts/AuthContext.jsx';
-import { getProviderById } from '../../../lib/providers.js';
+import {
+  providerAPI,
+  providerDisplayName,
+} from '../../../lib/providers.js';
 
 export default function AppointmentConfirmationPage() {
   const { user, loading, isAdmin } = useAuth();
@@ -18,13 +21,43 @@ export default function AppointmentConfirmationPage() {
   const bookedDate = searchParams.get('date');
   const bookedTime = searchParams.get('time');
 
-  const provider = getProviderById(providerId);
+  const [provider, setProvider] = useState(null);
+  const [providerLoading, setProviderLoading] = useState(Boolean(providerId));
 
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
     }
   }, [loading, user, router]);
+
+  useEffect(() => {
+    if (!providerId) {
+      setProvider(null);
+      setProviderLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      setProviderLoading(true);
+      try {
+        const res = await providerAPI.getProviderById(providerId);
+        if (!cancelled && res?.success && res.data) {
+          setProvider(res.data);
+        } else if (!cancelled) {
+          setProvider(null);
+        }
+      } catch {
+        if (!cancelled) setProvider(null);
+      } finally {
+        if (!cancelled) setProviderLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [providerId]);
 
   if (loading) {
     return (
@@ -73,20 +106,29 @@ export default function AppointmentConfirmationPage() {
 
             <div>
               <div className="text-sm text-slate-500">Provider</div>
-              <div className="text-lg font-semibold text-slate-900">
-                {provider?.name || '—'}
-              </div>
-              {isAdmin && provider?.service && (
-                <div className="text-sm text-slate-600 mt-1">
-                  <span className="font-medium text-slate-700">Service:</span>{' '}
-                  {provider.service}
+              {providerLoading ? (
+                <div className="flex items-center gap-2 mt-1">
+                  <CircularProgress size={20} />
+                  <span className="text-slate-600">Loading…</span>
                 </div>
-              )}
-              {isAdmin && provider?.location && (
-                <div className="text-sm text-slate-600 mt-1">
-                  <span className="font-medium text-slate-700">Location:</span>{' '}
-                  {provider.location}
-                </div>
+              ) : (
+                <>
+                  <div className="text-lg font-semibold text-slate-900">
+                    {provider ? providerDisplayName(provider) : '—'}
+                  </div>
+                  {isAdmin && provider?.service && (
+                    <div className="text-sm text-slate-600 mt-1">
+                      <span className="font-medium text-slate-700">Service:</span>{' '}
+                      {provider.service}
+                    </div>
+                  )}
+                  {isAdmin && provider?.availability && (
+                    <div className="text-sm text-slate-600 mt-1">
+                      <span className="font-medium text-slate-700">Availability:</span>{' '}
+                      {provider.availability}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -121,4 +163,3 @@ export default function AppointmentConfirmationPage() {
     </div>
   );
 }
-

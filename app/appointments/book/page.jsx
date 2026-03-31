@@ -7,7 +7,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Navigation from '../../../components/Navigation.jsx';
 import AppointmentCalendar from '../../../components/Calendar';
 import { appointmentAPI } from '../../../lib/api';
-import { getProviders, getProviderById } from '../../../lib/providers.js';
+import {
+  providerAPI,
+  providerDisplayName,
+  getProviderFromList,
+} from '../../../lib/providers.js';
 import { format } from 'date-fns';
 import { isTimeSlotAvailable } from '../../../lib/utils';
 import { 
@@ -43,6 +47,7 @@ export default function BookAppointmentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [providers, setProviders] = useState([]);
+  const [providersLoading, setProvidersLoading] = useState(true);
   const [selectedProviderId, setSelectedProviderId] = useState('');
 
   const [selectedDate, setSelectedDate] = useState(null);
@@ -78,16 +83,40 @@ export default function BookAppointmentPage() {
   }, [user, isAdmin, setValue]);
 
   useEffect(() => {
-    const loadedProviders = getProviders();
-    setProviders(loadedProviders);
+    let cancelled = false;
+    (async () => {
+      setProvidersLoading(true);
+      try {
+        const res = await providerAPI.listProviders();
+        if (!cancelled && res?.success && Array.isArray(res.data)) {
+          setProviders(res.data);
+        } else if (!cancelled) {
+          setProviders([]);
+        }
+      } catch {
+        if (!cancelled) setProviders([]);
+      } finally {
+        if (!cancelled) setProvidersLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
     if (providers.length === 0) return;
     const queryProviderId = searchParams?.get('providerId');
-    const hasQueryProvider = providers.some((p) => p.id === queryProviderId);
-    setSelectedProviderId(hasQueryProvider ? queryProviderId : providers[0].id);
+    const hasQueryProvider = providers.some(
+      (p) => String(p.id) === String(queryProviderId)
+    );
+    const nextId = hasQueryProvider
+      ? String(queryProviderId)
+      : String(providers[0].id);
+    setSelectedProviderId(nextId);
   }, [providers, searchParams]);
+
+  const selectedProvider = getProviderFromList(providers, selectedProviderId);
 
   const handleDateSelect = (date) => {
     setSelectedDate(date);
@@ -99,7 +128,6 @@ export default function BookAppointmentPage() {
   };
 
   const handlePreviewSubmit = (data) => {
-    const selectedProvider = getProviderById(selectedProviderId);
     if (!selectedDate || !selectedTime) {
       setError('Please select a date and time');
       return;
@@ -129,7 +157,6 @@ export default function BookAppointmentPage() {
 
   const handleConfirmAppointment = async () => {
     if (!confirmData) return;
-    const selectedProvider = getProviderById(selectedProviderId);
 
     if (!selectedProvider || !selectedDate || !selectedTime) {
       setError('Please complete provider, date, and time selection.');
@@ -145,11 +172,11 @@ export default function BookAppointmentPage() {
     try {
       const providerNotes = isAdmin
         ? [
-            `Provider: ${selectedProvider.name}`,
+            `Provider: ${providerDisplayName(selectedProvider)}`,
             `Service: ${selectedProvider.service}`,
-            `Location: ${selectedProvider.location}`,
+            `Availability: ${selectedProvider.availability || '—'}`,
           ].join('\n')
-        : `Provider: ${selectedProvider.name}`;
+        : `Provider: ${providerDisplayName(selectedProvider)}`;
 
       const notesParts = [providerNotes];
       if (confirmData.notes) {
@@ -341,7 +368,22 @@ export default function BookAppointmentPage() {
                     Provider
                   </Typography>
 
-                  <FormControl fullWidth>
+                  {providersLoading && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                      <CircularProgress size={22} />
+                      <Typography variant="body2" color="text.secondary">
+                        Loading providers…
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {!providersLoading && providers.length === 0 && (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      No providers are available. Please contact an administrator.
+                    </Alert>
+                  )}
+
+                  <FormControl fullWidth disabled={providersLoading || providers.length === 0}>
                     <InputLabel id="provider-select-label">Choose provider</InputLabel>
                     <Select
                       labelId="provider-select-label"
@@ -350,14 +392,14 @@ export default function BookAppointmentPage() {
                       onChange={(e) => setSelectedProviderId(e.target.value)}
                     >
                       {providers.map((p) => (
-                        <MenuItem key={p.id} value={p.id}>
-                          {p.name}
+                        <MenuItem key={p.id} value={String(p.id)}>
+                          {providerDisplayName(p)}
                         </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
 
-                  {getProviderById(selectedProviderId) && (
+                  {selectedProvider && (
                     <Box
                       sx={{
                         mt: 3,
@@ -369,15 +411,16 @@ export default function BookAppointmentPage() {
                       }}
                     >
                       <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1 }}>
-                        {getProviderById(selectedProviderId)?.name}
+                        {providerDisplayName(selectedProvider)}
                       </Typography>
                       {isAdmin && (
                         <>
                           <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                            <strong>Service:</strong> {getProviderById(selectedProviderId)?.service}
+                            <strong>Service:</strong> {selectedProvider.service}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            <strong>Location:</strong> {getProviderById(selectedProviderId)?.location}
+                            <strong>Availability:</strong>{' '}
+                            {selectedProvider.availability || '—'}
                           </Typography>
                         </>
                       )}
@@ -640,16 +683,16 @@ export default function BookAppointmentPage() {
 
                 <DialogContent sx={{ pt: 2 }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 900, mb: 1 }}>
-                    {getProviderById(selectedProviderId)?.name}
+                    {selectedProvider ? providerDisplayName(selectedProvider) : '—'}
                   </Typography>
 
-                  {isAdmin && (
+                  {isAdmin && selectedProvider && (
                     <>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        <strong>Service:</strong> {getProviderById(selectedProviderId)?.service}
+                        <strong>Service:</strong> {selectedProvider.service}
                       </Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        <strong>Location:</strong> {getProviderById(selectedProviderId)?.location}
+                        <strong>Availability:</strong> {selectedProvider.availability || '—'}
                       </Typography>
                     </>
                   )}
