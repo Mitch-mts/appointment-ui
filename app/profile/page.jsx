@@ -86,8 +86,8 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400"></div>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-sky-600 dark:border-cyan-400" />
       </div>
     );
   }
@@ -147,29 +147,31 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900">
+    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       {/* Soft illustration-style background to match landing/auth pages */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl" />
-        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl" />
-        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl" />
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50" />
+        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl dark:bg-sky-900/40" />
+        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl dark:bg-indigo-900/30" />
+        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl dark:bg-blue-900/25" />
+        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" />
       </div>
 
       <Navigation />
       
       <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
-          <p className="mt-2 text-gray-600">Manage your account information</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Profile</h1>
+          <p className="mt-2 text-gray-600 dark:text-slate-400">Manage your account information</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Profile Info */}
           <div className="lg:col-span-2">
             <div className="card">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold">Personal Information</h2>
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">
+                  Personal Information
+                </h2>
                 <button
                   onClick={() => setEditing(!editing)}
                   className="btn-secondary"
@@ -179,20 +181,23 @@ export default function ProfilePage() {
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
                   {error}
                 </div>
               )}
 
               {success && (
-                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
+                <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-700 dark:border-green-800 dark:bg-green-950/50 dark:text-green-300">
                   {success}
                 </div>
               )}
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="name"
+                    className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-300"
+                  >
                     <UserIcon className="h-4 w-4 inline mr-2" />
                     Full Name
                   </label>
@@ -207,15 +212,18 @@ export default function ProfilePage() {
                     type="text"
                     disabled={!editing}
                     placeholder={user?.fullName || user?.name || 'Enter your full name'}
-                    className={`input-field ${!editing ? 'bg-gray-100' : ''}`}
+                    className={`input-field ${!editing ? 'bg-gray-100 dark:bg-slate-800' : ''}`}
                   />
                   {errors.name && (
-                    <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name.message}</p>
                   )}
                 </div>
 
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="email"
+                    className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-300"
+                  >
                     <Mail className="h-4 w-4 inline mr-2" />
                     Email Address
                   </label>
@@ -229,10 +237,10 @@ export default function ProfilePage() {
                     })}
                     type="email"
                     disabled={!editing}
-                    className={`input-field ${!editing ? 'bg-gray-100' : ''}`}
+                    className={`input-field ${!editing ? 'bg-gray-100 dark:bg-slate-800' : ''}`}
                   />
                   {errors.email && (
-                    <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email.message}</p>
                   )}
                 </div>
 
@@ -276,23 +284,25 @@ export default function ProfilePage() {
           {/* Account Info */}
           <div className="space-y-6">
             <div className="card">
-              <h3 className="text-lg font-semibold mb-4">Account Information</h3>
+              <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-slate-100">
+                Account Information
+              </h3>
               <div className="space-y-4">
                 <div className="flex items-center space-x-3">
-                  <Shield className="h-5 w-5 text-gray-500" />
+                  <Shield className="h-5 w-5 text-gray-500 dark:text-slate-400" />
                   <div>
-                    <p className="text-sm text-gray-500">Role</p>
-                    <p className="font-medium text-gray-900">
+                    <p className="text-sm text-gray-500 dark:text-slate-400">Role</p>
+                    <p className="font-medium text-gray-900 dark:text-slate-100">
                       {user.role === 'ADMIN' ? 'Administrator' : 'Client'}
                     </p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-3">
-                  <UserIcon className="h-5 w-5 text-gray-500" />
+                  <UserIcon className="h-5 w-5 text-gray-500 dark:text-slate-400" />
                   <div>
-                    <p className="text-sm text-gray-500">Member Since</p>
-                    <p className="font-medium text-gray-900">
+                    <p className="text-sm text-gray-500 dark:text-slate-400">Member Since</p>
+                    <p className="font-medium text-gray-900 dark:text-slate-100">
                       {new Date(user.createdAt).toLocaleDateString()}
                     </p>
                   </div>
@@ -301,7 +311,9 @@ export default function ProfilePage() {
             </div>
 
             <div className="card">
-              <h3 className="text-lg font-semibold mb-4">Account Actions</h3>
+              <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-slate-100">
+                Account Actions
+              </h3>
               <div className="space-y-3">
                 <button 
                   onClick={() => setShowChangePasswordDialog(true)}
@@ -323,16 +335,20 @@ export default function ProfilePage() {
 
       {/* Success Dialog */}
       {showSuccessDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6 dark:bg-slate-900 dark:ring-1 dark:ring-slate-700">
             <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-950/60">
+                <svg className="h-6 w-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Profile Updated Successfully!</h3>
-              <p className="text-sm text-gray-500 mb-6">Your profile information has been updated.</p>
+              <h3 className="mb-2 text-lg font-medium text-gray-900 dark:text-slate-100">
+                Profile Updated Successfully!
+              </h3>
+              <p className="mb-6 text-sm text-gray-500 dark:text-slate-400">
+                Your profile information has been updated.
+              </p>
               <button
                 onClick={() => {
                   setShowSuccessDialog(false);
@@ -349,13 +365,14 @@ export default function ProfilePage() {
 
       {/* Change Password Dialog */}
       {showChangePasswordDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">Change Password</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6 dark:bg-slate-900 dark:ring-1 dark:ring-slate-700">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100">Change Password</h3>
               <button
+                type="button"
                 onClick={() => setShowChangePasswordDialog(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300"
               >
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -364,21 +381,24 @@ export default function ProfilePage() {
             </div>
 
             {passwordError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
                 {passwordError}
               </div>
             )}
 
             {passwordSuccess && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4">
+              <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-700 dark:border-green-800 dark:bg-green-950/50 dark:text-green-300">
                 {passwordSuccess}
               </div>
             )}
 
             <form onSubmit={handleSubmitPassword(handleChangePassword)} className="space-y-4">
               <div>
-                <label htmlFor="oldPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                  <Lock className="h-4 w-4 inline mr-2" />
+                <label
+                  htmlFor="oldPassword"
+                  className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-300"
+                >
+                  <Lock className="mr-2 inline h-4 w-4" />
                   Current Password
                 </label>
                 <input
@@ -389,13 +409,18 @@ export default function ProfilePage() {
                   className="input-field"
                 />
                 {passwordErrors.oldPassword && (
-                  <p className="mt-1 text-sm text-red-600">{passwordErrors.oldPassword.message}</p>
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {passwordErrors.oldPassword.message}
+                  </p>
                 )}
               </div>
 
               <div>
-                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                  <Lock className="h-4 w-4 inline mr-2" />
+                <label
+                  htmlFor="newPassword"
+                  className="mb-2 block text-sm font-medium text-gray-700 dark:text-slate-300"
+                >
+                  <Lock className="mr-2 inline h-4 w-4" />
                   New Password
                 </label>
                 <input
@@ -410,7 +435,9 @@ export default function ProfilePage() {
                   className="input-field"
                 />
                 {passwordErrors.newPassword && (
-                  <p className="mt-1 text-sm text-red-600">{passwordErrors.newPassword.message}</p>
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {passwordErrors.newPassword.message}
+                  </p>
                 )}
               </div>
 
@@ -449,16 +476,16 @@ export default function ProfilePage() {
 
       {/* Delete Account Confirmation Dialog */}
       {showDeleteConfirmDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6 dark:bg-slate-900 dark:ring-1 dark:ring-slate-700">
             <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-950/60">
+                <svg className="h-6 w-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Delete Account</h3>
-              <p className="text-sm text-gray-500 mb-6">
+              <h3 className="mb-2 text-lg font-medium text-gray-900 dark:text-slate-100">Delete Account</h3>
+              <p className="mb-6 text-sm text-gray-500 dark:text-slate-400">
                 Are you sure you want to delete your account? This action cannot be undone.
               </p>
               <div className="flex space-x-3">
@@ -490,16 +517,18 @@ export default function ProfilePage() {
 
       {/* Delete Response Dialog */}
       {showDeleteResponseDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6 dark:bg-slate-900 dark:ring-1 dark:ring-slate-700">
             <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-4">
-                <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-950/60">
+                <svg className="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Delete Account Response</h3>
-              <p className="text-sm text-gray-600 mb-6">
+              <h3 className="mb-2 text-lg font-medium text-gray-900 dark:text-slate-100">
+                Delete Account Response
+              </h3>
+              <p className="mb-6 text-sm text-gray-600 dark:text-slate-300">
                 {deleteResponseMessage}
               </p>
               <button

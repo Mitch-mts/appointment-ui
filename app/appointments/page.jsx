@@ -129,8 +129,8 @@ export default function AppointmentsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400"></div>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-sky-600 dark:border-cyan-400" />
       </div>
     );
   }
@@ -140,22 +140,22 @@ export default function AppointmentsPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900">
+    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       {/* Soft illustration-style background to match landing/auth pages */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl" />
-        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl" />
-        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl" />
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50" />
+        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl dark:bg-sky-900/40" />
+        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl dark:bg-indigo-900/30" />
+        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl dark:bg-blue-900/25" />
+        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" />
       </div>
 
       <Navigation />
       
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-8">
+      <div className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Appointments</h1>
-            <p className="mt-2 text-gray-600">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Appointments</h1>
+            <p className="mt-2 text-gray-600 dark:text-slate-400">
               {isAdmin ? 'Manage all appointments across the system' : 'View and manage your personal appointments'}
             </p>
           </div>
@@ -171,8 +171,8 @@ export default function AppointmentsPage() {
         {/* Filter */}
         <div className="card mb-6">
           <div className="flex items-center space-x-4">
-            <Filter className="h-5 w-5 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Filter:</span>
+            <Filter className="h-5 w-5 text-gray-500 dark:text-slate-400" />
+            <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Filter:</span>
             <div className="flex space-x-2">
               {[
                 { key: 'all', label: 'All' },
@@ -183,11 +183,12 @@ export default function AppointmentsPage() {
               ].map((filterOption) => (
                 <button
                   key={filterOption.key}
+                  type="button"
                   onClick={() => setFilter(filterOption.key)}
-                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                  className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
                     filter === filterOption.key
                       ? 'bg-primary-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600'
                   }`}
                 >
                   {filterOption.label}
@@ -199,9 +200,9 @@ export default function AppointmentsPage() {
 
         {/* Appointments List */}
         {loadingAppointments ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading appointments...</p>
+          <div className="py-12 text-center">
+            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary-600 dark:border-primary-400" />
+            <p className="mt-4 text-gray-600 dark:text-slate-400">Loading appointments...</p>
           </div>
         ) : currentAppointments.length > 0 ? (
           <div className="space-y-3">
@@ -218,14 +219,14 @@ export default function AppointmentsPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
+          <div className="py-12 text-center">
+            <div className="mb-4 text-gray-400 dark:text-slate-500">
               <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No appointments found</h3>
-            <p className="text-gray-500 mb-6">
+            <h3 className="mb-2 text-lg font-medium text-gray-900 dark:text-slate-100">No appointments found</h3>
+            <p className="mb-6 text-gray-500 dark:text-slate-400">
               {filter === 'all' 
                 ? 'You don\'t have any appointments yet.'
                 : `No ${filter} appointments found.`
@@ -233,6 +234,7 @@ export default function AppointmentsPage() {
             </p>
             {filter !== 'all' && (
               <button
+                type="button"
                 onClick={() => setFilter('all')}
                 className="btn-primary"
               >
@@ -244,16 +246,17 @@ export default function AppointmentsPage() {
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="mt-8 flex items-center justify-between">
-            <div className="text-sm text-gray-700">
+          <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm text-gray-700 dark:text-slate-300">
               Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredAppointments.length)} of {filteredAppointments.length} appointments
             </div>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
+                type="button"
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
               >
                 Previous
               </button>
@@ -261,11 +264,12 @@ export default function AppointmentsPage() {
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                 <button
                   key={page}
+                  type="button"
                   onClick={() => handlePageChange(page)}
-                  className={`px-3 py-2 text-sm font-medium rounded-md ${
+                  className={`rounded-md px-3 py-2 text-sm font-medium ${
                     currentPage === page
                       ? 'bg-primary-600 text-white'
-                      : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                      : 'border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
                   }`}
                 >
                   {page}
@@ -273,9 +277,10 @@ export default function AppointmentsPage() {
               ))}
               
               <button
+                type="button"
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
               >
                 Next
               </button>

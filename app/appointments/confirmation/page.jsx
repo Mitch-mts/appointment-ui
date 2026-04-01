@@ -61,8 +61,8 @@ export default function AppointmentConfirmationPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400" />
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-sky-600 dark:border-cyan-400" />
       </div>
     );
   }
@@ -79,52 +79,52 @@ export default function AppointmentConfirmationPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900">
+    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl" />
-        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl" />
-        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl" />
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50" />
+        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl dark:bg-sky-900/40" />
+        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl dark:bg-indigo-900/30" />
+        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl dark:bg-blue-900/25" />
+        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" />
       </div>
 
       <Navigation />
 
-      <main className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white/80 backdrop-blur border border-slate-200 rounded-3xl p-8 shadow-sm">
-          <h1 className="text-3xl font-bold text-slate-900">Appointment confirmed</h1>
-          <p className="mt-2 text-slate-600">
+      <main className="relative z-10 mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="rounded-3xl border border-slate-200 bg-white/80 p-8 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-900/90">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Appointment confirmed</h1>
+          <p className="mt-2 text-slate-600 dark:text-slate-400">
             You’re all set. Below is your booking summary.
           </p>
 
           <div className="mt-7 space-y-4">
             <div>
-              <div className="text-sm text-slate-500">Reference</div>
-              <div className="text-lg font-semibold text-slate-900">
+              <div className="text-sm text-slate-500 dark:text-slate-400">Reference</div>
+              <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 {referenceNumber || '—'}
               </div>
             </div>
 
             <div>
-              <div className="text-sm text-slate-500">Provider</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400">Provider</div>
               {providerLoading ? (
-                <div className="flex items-center gap-2 mt-1">
+                <div className="mt-1 flex items-center gap-2">
                   <CircularProgress size={20} />
-                  <span className="text-slate-600">Loading…</span>
+                  <span className="text-slate-600 dark:text-slate-300">Loading…</span>
                 </div>
               ) : (
                 <>
-                  <div className="text-lg font-semibold text-slate-900">
+                  <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                     {provider ? providerDisplayName(provider) : '—'}
                   </div>
                   {isAdmin && provider?.service && (
-                    <div className="text-sm text-slate-600 mt-1">
-                      <span className="font-medium text-slate-700">Service:</span>{' '}
+                    <div className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                      <span className="font-medium text-slate-700 dark:text-slate-300">Service:</span>{' '}
                       {provider.service}
                     </div>
                   )}
                   {isAdmin && provider?.availability && (
-                    <div className="text-sm text-slate-600 mt-1">
-                      <span className="font-medium text-slate-700">Availability:</span>{' '}
+                    <div className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                      <span className="font-medium text-slate-700 dark:text-slate-300">Availability:</span>{' '}
                       {provider.availability}
                     </div>
                   )}
@@ -133,8 +133,8 @@ export default function AppointmentConfirmationPage() {
             </div>
 
             <div>
-              <div className="text-sm text-slate-500">When</div>
-              <div className="text-lg font-semibold text-slate-900">
+              <div className="text-sm text-slate-500 dark:text-slate-400">When</div>
+              <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 {formattedDate || '—'} {bookedTime ? `at ${bookedTime}` : ''}
               </div>
             </div>

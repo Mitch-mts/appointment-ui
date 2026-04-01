@@ -115,8 +115,8 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400"></div>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-sky-600 dark:border-cyan-400" />
       </div>
     );
   }
@@ -126,33 +126,33 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900">
+    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       {/* Soft illustration-style background to match landing/auth pages */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl" />
-        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl" />
-        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl" />
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50" />
+        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl dark:bg-sky-900/40" />
+        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl dark:bg-indigo-900/30" />
+        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl dark:bg-blue-900/25" />
+        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" />
       </div>
 
       <Navigation />
       
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
-          <p className="mt-2 text-gray-600">Manage all appointments and system settings</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Admin Panel</h1>
+          <p className="mt-2 text-gray-600 dark:text-slate-400">Manage all appointments and system settings</p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-4">
           <div className="card">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <Calendar className="h-8 w-8 text-primary-600" />
+                <Calendar className="h-8 w-8 text-primary-600 dark:text-primary-400" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Total Appointments</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.total}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-slate-400">Total Appointments</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-slate-100">{stats.total}</p>
               </div>
             </div>
           </div>
@@ -160,11 +160,11 @@ export default function AdminPage() {
           <div className="card">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <AlertCircle className="h-8 w-8 text-yellow-600" />
+                <AlertCircle className="h-8 w-8 text-yellow-600 dark:text-yellow-500" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Scheduled</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.scheduled}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-slate-400">Scheduled</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-slate-100">{stats.scheduled}</p>
               </div>
             </div>
           </div>
@@ -172,11 +172,11 @@ export default function AdminPage() {
           <div className="card">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <TrendingUp className="h-8 w-8 text-green-600" />
+                <TrendingUp className="h-8 w-8 text-green-600 dark:text-green-500" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Completed</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.completed}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-slate-400">Completed</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-slate-100">{stats.completed}</p>
               </div>
             </div>
           </div>
@@ -184,11 +184,11 @@ export default function AdminPage() {
           <div className="card">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <Users className="h-8 w-8 text-red-600" />
+                <Users className="h-8 w-8 text-red-600 dark:text-red-500" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Cancelled</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.cancelled}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-slate-400">Cancelled</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-slate-100">{stats.cancelled}</p>
               </div>
             </div>
           </div>
@@ -198,34 +198,40 @@ export default function AdminPage() {
         <div id="users" className="mt-12">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Users className="h-6 w-6 text-primary-600" />
-              <h2 className="text-2xl font-semibold text-gray-900">Registered Users</h2>
+              <Users className="h-6 w-6 text-primary-600 dark:text-primary-400" />
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-slate-100">Registered Users</h2>
             </div>
             {!loadingUsers && users.length > 0 && (
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-slate-400">
                 Showing {indexOfFirstUser + 1}-{Math.min(indexOfLastUser, users.length)} of {users.length} users
               </p>
             )}
           </div>
 
           {loadingUsers ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading users...</p>
+            <div className="py-12 text-center">
+              <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary-600 dark:border-primary-400" />
+              <p className="mt-4 text-gray-600 dark:text-slate-400">Loading users...</p>
             </div>
           ) : users && users.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+              <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {currentUsers.map((u) => (
                   <div key={u.id || u._id || u.email} className="card">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-gray-900 font-medium">{u.fullName || u.name || 'Unknown'}</p>
-                        <p className="text-gray-600 text-sm">{u.email}</p>
+                        <p className="font-medium text-gray-900 dark:text-slate-100">
+                          {u.fullName || u.name || 'Unknown'}
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-slate-400">{u.email}</p>
                       </div>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        (u.role === 'ADMIN') ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'
-                      }`}>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          u.role === 'ADMIN'
+                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300'
+                            : 'bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-200'
+                        }`}
+                      >
                         {u.role || 'USER'}
                       </span>
                     </div>
@@ -235,23 +241,23 @@ export default function AdminPage() {
 
               {/* Pagination Controls */}
               {totalUsersPages > 1 && (
-                <div className="flex items-center justify-center gap-2 mt-6">
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
                   <button
+                    type="button"
                     onClick={() => handleUsersPageChange(currentUsersPage - 1)}
                     disabled={currentUsersPage === 1}
-                    className={`flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                       currentUsersPage === 1
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                        ? 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-slate-800 dark:text-slate-600'
+                        : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
                     }`}
                   >
                     <ChevronLeft className="h-4 w-4" />
                     Previous
                   </button>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex flex-wrap items-center justify-center gap-1">
                     {Array.from({ length: totalUsersPages }, (_, i) => i + 1).map((page) => {
-                      // Show first page, last page, current page, and pages around current
                       if (
                         page === 1 ||
                         page === totalUsersPages ||
@@ -260,11 +266,12 @@ export default function AdminPage() {
                         return (
                           <button
                             key={page}
+                            type="button"
                             onClick={() => handleUsersPageChange(page)}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                               currentUsersPage === page
                                 ? 'bg-primary-600 text-white'
-                                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                                : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
                             }`}
                           >
                             {page}
@@ -275,7 +282,7 @@ export default function AdminPage() {
                         page === currentUsersPage + 2
                       ) {
                         return (
-                          <span key={page} className="px-2 text-gray-500">
+                          <span key={page} className="px-2 text-gray-500 dark:text-slate-500">
                             ...
                           </span>
                         );
@@ -285,12 +292,13 @@ export default function AdminPage() {
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => handleUsersPageChange(currentUsersPage + 1)}
                     disabled={currentUsersPage === totalUsersPages}
-                    className={`flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                       currentUsersPage === totalUsersPages
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                        ? 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-slate-800 dark:text-slate-600'
+                        : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
                     }`}
                   >
                     Next
@@ -300,14 +308,14 @@ export default function AdminPage() {
               )}
             </>
           ) : (
-            <div className="text-center py-12">
-              <div className="text-gray-400 mb-4">
+            <div className="py-12 text-center">
+              <div className="mb-4 text-gray-400 dark:text-slate-500">
                 <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87M16 3.13a4 4 0 110 7.75M8 3.13a4 4 0 110 7.75" />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
-              <p className="text-gray-500">There are no registered users to display.</p>
+              <h3 className="mb-2 text-lg font-medium text-gray-900 dark:text-slate-100">No users found</h3>
+              <p className="text-gray-500 dark:text-slate-400">There are no registered users to display.</p>
             </div>
           )}
         </div>

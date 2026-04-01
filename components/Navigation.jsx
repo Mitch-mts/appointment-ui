@@ -30,6 +30,7 @@ import {
   KeyboardArrowDown as ArrowDownIcon,
 } from '@mui/icons-material';
 import { useState } from 'react';
+import ColorModeToggle from './ColorModeToggle.jsx';
 
 export default function Navigation() {
   const { user, logout, isAdmin } = useAuth();
@@ -64,12 +65,18 @@ export default function Navigation() {
     <AppBar
       position="static"
       elevation={1}
-      sx={{
-        backgroundColor: 'rgba(255,255,255,0.9)',
+      sx={(theme) => ({
+        backgroundColor:
+          theme.palette.mode === 'dark'
+            ? 'rgba(15,23,42,0.92)'
+            : 'rgba(255,255,255,0.9)',
         backdropFilter: 'blur(12px)',
         color: 'text.primary',
-        borderBottom: '1px solid rgba(148,163,184,0.25)',
-      }}
+        borderBottom:
+          theme.palette.mode === 'dark'
+            ? '1px solid rgba(51,65,85,0.6)'
+            : '1px solid rgba(148,163,184,0.25)',
+      })}
     >
       <Toolbar>
         <Link href="/dashboard" style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -121,6 +128,8 @@ export default function Navigation() {
               </Button>
             </>
           )}
+
+          <ColorModeToggle sx={{ ml: 0.5 }} />
 
           <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
 

@@ -16,6 +16,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { DeleteOutline } from '@mui/icons-material';
 import Navigation from '../../../components/Navigation.jsx';
 import ProviderAvailabilityPicker from '../../../components/ProviderAvailabilityPicker.jsx';
@@ -33,6 +34,7 @@ const EMPTY_FORM = {
 };
 
 export default function AdminProvidersPage() {
+  const theme = useTheme();
   const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
   const [providers, setProviders] = useState([]);
@@ -208,8 +210,8 @@ export default function AdminProvidersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400"></div>
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-sky-600 dark:border-cyan-400" />
       </div>
     );
   }
@@ -217,12 +219,12 @@ export default function AdminProvidersPage() {
   if (!user || !isAdmin) return null;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900">
+    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl" />
-        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl" />
-        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl" />
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50" />
+        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl dark:bg-sky-900/40" />
+        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl dark:bg-indigo-900/30" />
+        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl dark:bg-blue-900/25" />
+        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" />
       </div>
 
       <Navigation />
@@ -382,12 +384,22 @@ export default function AdminProvidersPage() {
             maxWidth: 440,
             width: '100%',
             overflow: 'hidden',
-            background:
-              'linear-gradient(165deg, rgba(224, 242, 254, 0.95) 0%, #ffffff 42%, #f8fafc 100%)',
-            border: '1px solid',
-            borderColor: 'rgba(14, 165, 233, 0.22)',
-            boxShadow:
-              '0 25px 50px -12px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(255,255,255,0.6) inset',
+            ...(theme.palette.mode === 'dark'
+              ? {
+                  background:
+                    'linear-gradient(165deg, rgba(30, 41, 59, 0.98) 0%, #0f172a 42%, #1e293b 100%)',
+                  border: '1px solid',
+                  borderColor: 'rgba(51, 65, 85, 0.9)',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.55)',
+                }
+              : {
+                  background:
+                    'linear-gradient(165deg, rgba(224, 242, 254, 0.95) 0%, #ffffff 42%, #f8fafc 100%)',
+                  border: '1px solid',
+                  borderColor: 'rgba(14, 165, 233, 0.22)',
+                  boxShadow:
+                    '0 25px 50px -12px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(255,255,255,0.6) inset',
+                }),
           },
         }}
         slotProps={{
@@ -406,7 +418,10 @@ export default function AdminProvidersPage() {
             pb: 1.5,
             px: 3,
             borderBottom: '1px solid',
-            borderColor: 'rgba(14, 165, 233, 0.12)',
+            borderColor:
+              theme.palette.mode === 'dark'
+                ? 'rgba(51, 65, 85, 0.7)'
+                : 'rgba(14, 165, 233, 0.12)',
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
@@ -445,9 +460,15 @@ export default function AdminProvidersPage() {
               px: 2,
               py: 1.5,
               borderRadius: 2,
-              bgcolor: 'rgba(255, 255, 255, 0.7)',
+              bgcolor:
+                theme.palette.mode === 'dark'
+                  ? 'rgba(15, 23, 42, 0.75)'
+                  : 'rgba(255, 255, 255, 0.7)',
               border: '1px solid',
-              borderColor: 'rgba(148, 163, 184, 0.35)',
+              borderColor:
+                theme.palette.mode === 'dark'
+                  ? 'rgba(71, 85, 105, 0.6)'
+                  : 'rgba(148, 163, 184, 0.35)',
             }}
           >
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
