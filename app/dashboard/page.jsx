@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useRouter } from 'next/navigation';
 import Navigation from '../../components/Navigation.jsx';
+import DashboardCalendar from '../../components/DashboardCalendar.jsx';
 import { appointmentAPI } from '../../lib/api';
 import { formatDate, formatTime, isToday } from '../../lib/utils';
 import {
@@ -17,12 +18,11 @@ import {
   Chip,
   List,
   ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
   IconButton,
+  Tabs,
+  Tab,
   Alert,
   CircularProgress,
-  Paper,
   Divider,
   Dialog,
   DialogTitle,
@@ -34,7 +34,6 @@ import {
   Schedule as ClockIcon,
   Add as PlusIcon,
   People as UsersIcon,
-  TrendingUp as TrendingUpIcon,
   Cancel as CancelIcon,
   Event as EventIcon,
   CheckCircle,
@@ -47,6 +46,7 @@ export default function DashboardPage() {
   const [appointments, setAppointments] = useState([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
   const [welcomeDialogOpen, setWelcomeDialogOpen] = useState(false);
+  const [todayTab, setTodayTab] = useState(0);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -295,6 +295,17 @@ export default function DashboardPage() {
     (apt) => apt.bookingStatus === "COMPLETED"
   );
 
+  const todaysCompletedBookings = allCompletedAppointments.filter((apt) => {
+    if (!apt.bookedDate) return false;
+    const today = new Date();
+    const appointmentDate = new Date(apt.bookedDate);
+    return (
+      appointmentDate.getDate() === today.getDate() &&
+      appointmentDate.getMonth() === today.getMonth() &&
+      appointmentDate.getFullYear() === today.getFullYear()
+    );
+  });
+
   const getStatusColor = (status) => {
     if (!status) return 'warning';
     switch (status) {
@@ -437,225 +448,396 @@ export default function DashboardPage() {
           </Button>
         </Box>
 
-        {/* Today's Appointments - Side by Side */}
-        <Grid container spacing={2}>
-          {/* Upcoming Appointments */}
-          <Grid item xs={12} md={4}>
-            <Card elevation={3} sx={{ height: 'fit-content', minHeight: 400 }}>
-              <CardContent sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <ClockIcon sx={{ color: 'primary.main', mr: 1 }} />
-                  <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
-                    Today's Upcoming
-                  </Typography>
-                </Box>
-                <Divider sx={{ mb: 2 }} />
-                
-                {upcomingAppointments.length === 0 ? (
-                  <Alert severity="info" sx={{ mt: 2 }}>
-                    No upcoming appointments for today. Book your first appointment!
-                  </Alert>
-                ) : (
-                  <List sx={{ p: 0 }}>
-                    {upcomingAppointments.map((appointment, index) => (
-                      <Box key={appointment.id}>
-                        <ListItem sx={{ 
-                          p: 2, 
-                          mb: 1, 
-                          borderRadius: 1,
+        <DashboardCalendar appointments={appointments} loading={loadingAppointments} />
+
+        {/* Today's appointments — tabbed */}
+        <Card
+          elevation={4}
+          sx={{
+            overflow: 'hidden',
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+            background: (theme) =>
+              theme.palette.mode === 'dark'
+                ? 'linear-gradient(165deg, rgba(30,41,59,0.55) 0%, rgba(15,23,42,0.35) 45%, rgba(15,23,42,0.2) 100%)'
+                : 'linear-gradient(165deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%)',
+          }}
+        >
+          <Box
+            sx={{
+              px: { xs: 0, sm: 1 },
+              pt: 1.5,
+              background: (theme) =>
+                theme.palette.mode === 'dark'
+                  ? 'linear-gradient(90deg, rgba(59,130,246,0.14) 0%, rgba(99,102,241,0.08) 50%, rgba(59,130,246,0.06) 100%)'
+                  : 'linear-gradient(90deg, rgba(239,246,255,0.98) 0%, rgba(238,242,255,0.85) 50%, rgba(224,231,255,0.5) 100%)',
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+            }}
+          >
+            <Typography
+              variant="overline"
+              sx={{
+                px: 2,
+                pb: 0.75,
+                display: 'block',
+                letterSpacing: 2,
+                fontWeight: 800,
+                fontSize: '0.68rem',
+                color: 'text.secondary',
+              }}
+            >
+              Today at a glance
+            </Typography>
+            <Tabs
+              value={todayTab}
+              onChange={(_, v) => setTodayTab(v)}
+              variant="fullWidth"
+              aria-label="Today's appointment sections"
+              sx={{
+                minHeight: { xs: 56, sm: 64 },
+                '& .MuiTabs-flexContainer': { gap: 0 },
+                '& .MuiTab-root': {
+                  minHeight: { xs: 56, sm: 64 },
+                  py: 0.5,
+                  px: { xs: 0.25, sm: 1 },
+                  textTransform: 'none',
+                  color: 'text.secondary',
+                  transition: 'color 0.2s ease, background 0.2s ease',
+                  borderRadius: '14px 14px 0 0',
+                  '&.Mui-selected': {
+                    color: 'primary.main',
+                    bgcolor: (theme) =>
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(15,23,42,0.65)'
+                        : 'rgba(255,255,255,0.92)',
+                  },
+                },
+                '& .MuiTabs-indicator': {
+                  height: 4,
+                  borderRadius: 2,
+                  background: (theme) =>
+                    `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                },
+              }}
+            >
+              <Tab
+                id="today-tab-0"
+                aria-controls="today-panel-0"
+                label={
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: { xs: 0.75, sm: 1.25 },
+                      py: 0.5,
+                      maxWidth: 1,
+                    }}
+                  >
+                    <ClockIcon
+                      sx={{
+                        fontSize: { xs: 22, sm: 26 },
+                        color: todayTab === 0 ? 'primary.main' : 'action.active',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <Box sx={{ minWidth: 0, textAlign: 'left' }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 800, lineHeight: 1.15, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                      >
+                        Upcoming
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
+                        Still ahead today
+                      </Typography>
+                    </Box>
+                    <Chip
+                      label={upcomingAppointments.length}
+                      size="small"
+                      color={todayTab === 0 ? 'primary' : 'default'}
+                      variant={todayTab === 0 ? 'filled' : 'outlined'}
+                      sx={{ height: 22, minWidth: 28, fontWeight: 800, '& .MuiChip-label': { px: 0.75 } }}
+                    />
+                  </Box>
+                }
+              />
+              <Tab
+                id="today-tab-1"
+                aria-controls="today-panel-1"
+                label={
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: { xs: 0.75, sm: 1.25 },
+                      py: 0.5,
+                      maxWidth: 1,
+                    }}
+                  >
+                    <UsersIcon
+                      sx={{
+                        fontSize: { xs: 22, sm: 26 },
+                        color: todayTab === 1 ? 'primary.main' : 'action.active',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <Box sx={{ minWidth: 0, textAlign: 'left' }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 800, lineHeight: 1.15, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                      >
+                        Passed
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
+                        Time already went by
+                      </Typography>
+                    </Box>
+                    <Chip
+                      label={completedAppointments.length}
+                      size="small"
+                      color={todayTab === 1 ? 'primary' : 'default'}
+                      variant={todayTab === 1 ? 'filled' : 'outlined'}
+                      sx={{ height: 22, minWidth: 28, fontWeight: 800, '& .MuiChip-label': { px: 0.75 } }}
+                    />
+                  </Box>
+                }
+              />
+              <Tab
+                id="today-tab-2"
+                aria-controls="today-panel-2"
+                label={
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: { xs: 0.75, sm: 1.25 },
+                      py: 0.5,
+                      maxWidth: 1,
+                    }}
+                  >
+                    <CheckCircle
+                      sx={{
+                        fontSize: { xs: 22, sm: 26 },
+                        color: todayTab === 2 ? 'primary.main' : 'action.active',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <Box sx={{ minWidth: 0, textAlign: 'left' }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 800, lineHeight: 1.15, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                      >
+                        Completed
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
+                        Marked complete
+                      </Typography>
+                    </Box>
+                    <Chip
+                      label={todaysCompletedBookings.length}
+                      size="small"
+                      color={todayTab === 2 ? 'primary' : 'default'}
+                      variant={todayTab === 2 ? 'filled' : 'outlined'}
+                      sx={{ height: 22, minWidth: 28, fontWeight: 800, '& .MuiChip-label': { px: 0.75 } }}
+                    />
+                  </Box>
+                }
+              />
+            </Tabs>
+          </Box>
+
+          <CardContent sx={{ p: { xs: 2, sm: 3 }, minHeight: 380 }}>
+            <Box
+              id="today-panel-0"
+              role="tabpanel"
+              aria-labelledby="today-tab-0"
+              hidden={todayTab !== 0}
+            >
+              {upcomingAppointments.length === 0 ? (
+                <Alert severity="info" sx={{ mt: 0 }}>
+                  No upcoming appointments for today. Book your first appointment!
+                </Alert>
+              ) : (
+                <List sx={{ p: 0 }}>
+                  {upcomingAppointments.map((appointment, index) => (
+                    <Box key={appointment.id}>
+                      <ListItem
+                        sx={{
+                          p: 2,
+                          mb: 1,
+                          borderRadius: 2,
                           backgroundColor: 'background.paper',
                           border: '1px solid',
-                          borderColor: 'divider'
-                        }}>
-                          <Box sx={{ flex: 1 }}>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                              {appointment.fullName}
+                          borderColor: 'divider',
+                          boxShadow: (theme) =>
+                            theme.palette.mode === 'dark' ? 'none' : '0 1px 2px rgba(15,23,42,0.06)',
+                        }}
+                      >
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                            {appointment.fullName}
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              📅 Date: {appointment.bookedDate ? formatDate(appointment.bookedDate) : 'No date'}
                             </Typography>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              🕐 Time: {appointment.bookedTime ? formatTime(appointment.bookedTime) : 'No time'}
+                            </Typography>
+                            {appointment.notes && (
                               <Typography variant="body2" color="text.secondary">
-                                📅 Date: {appointment.bookedDate ? formatDate(appointment.bookedDate) : 'No date'}
+                                📝 Notes: {appointment.notes}
                               </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                🕐 Time: {appointment.bookedTime ? formatTime(appointment.bookedTime) : 'No time'}
-                              </Typography>
-                              {appointment.notes && (
-                                <Typography variant="body2" color="text.secondary">
-                                  📝 Notes: {appointment.notes}
-                                </Typography>
-                              )}
-                            </Box>
+                            )}
                           </Box>
-                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
-                            <Chip
-                              label={appointment.bookingStatus || "PENDING"}
-                              color={getStatusColor(appointment.bookingStatus)}
-                              size="small"
-                            />
-                            <IconButton
-                              onClick={() => handleCancelAppointment(appointment.id)}
-                              color="error"
-                              size="small"
-                              sx={{ 
-                                backgroundColor: 'error.light',
-                                color: 'white',
-                                '&:hover': { backgroundColor: 'error.main' }
-                              }}
-                            >
-                              <CancelIcon fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        </ListItem>
-                        {index < upcomingAppointments.length - 1 && <Divider sx={{ my: 1 }} />}
-                      </Box>
-                    ))}
-                  </List>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
+                        </Box>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+                          <Chip
+                            label={appointment.bookingStatus || 'PENDING'}
+                            color={getStatusColor(appointment.bookingStatus)}
+                            size="small"
+                          />
+                          <IconButton
+                            onClick={() => handleCancelAppointment(appointment.id)}
+                            color="error"
+                            size="small"
+                            sx={{
+                              backgroundColor: 'error.light',
+                              color: 'white',
+                              '&:hover': { backgroundColor: 'error.main' },
+                            }}
+                          >
+                            <CancelIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </ListItem>
+                      {index < upcomingAppointments.length - 1 && <Divider sx={{ my: 1 }} />}
+                    </Box>
+                  ))}
+                </List>
+              )}
+            </Box>
 
-          {/* Passed Appointments */}
-          <Grid item xs={12} md={4}>
-            <Card elevation={3} sx={{ height: 'fit-content', minHeight: 400 }}>
-              <CardContent sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <UsersIcon sx={{ color: 'success.main', mr: 1 }} />
-                  <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
-                    Today's Passed Appointments
-                  </Typography>
-                </Box>
-                <Divider sx={{ mb: 2 }} />
-                
-                {completedAppointments.length === 0 ? (
-                  <Alert severity="info" sx={{ mt: 2 }}>
-                    No passed appointments for today yet.
-                  </Alert>
-                ) : (
-                  <List sx={{ p: 0 }}>
-                    {completedAppointments.map((appointment, index) => (
-                      <Box key={appointment.id}>
-                        <ListItem sx={{ 
-                          p: 2, 
-                          mb: 1, 
-                          borderRadius: 1,
+            <Box
+              id="today-panel-1"
+              role="tabpanel"
+              aria-labelledby="today-tab-1"
+              hidden={todayTab !== 1}
+            >
+              {completedAppointments.length === 0 ? (
+                <Alert severity="info" sx={{ mt: 0 }}>
+                  No passed appointments for today yet.
+                </Alert>
+              ) : (
+                <List sx={{ p: 0 }}>
+                  {completedAppointments.map((appointment, index) => (
+                    <Box key={appointment.id}>
+                      <ListItem
+                        sx={{
+                          p: 2,
+                          mb: 1,
+                          borderRadius: 2,
                           backgroundColor: 'background.paper',
                           border: '1px solid',
-                          borderColor: 'divider'
-                        }}>
-                          <Box sx={{ flex: 1 }}>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                              {appointment.fullName}
+                          borderColor: 'divider',
+                          boxShadow: (theme) =>
+                            theme.palette.mode === 'dark' ? 'none' : '0 1px 2px rgba(15,23,42,0.06)',
+                        }}
+                      >
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                            {appointment.fullName}
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              📅 Date: {appointment.bookedDate ? formatDate(appointment.bookedDate) : 'No date'}
                             </Typography>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              🕐 Time: {appointment.bookedTime ? formatTime(appointment.bookedTime) : 'No time'}
+                            </Typography>
+                            {appointment.notes && (
                               <Typography variant="body2" color="text.secondary">
-                                📅 Date: {appointment.bookedDate ? formatDate(appointment.bookedDate) : 'No date'}
+                                📝 Notes: {appointment.notes}
                               </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                🕐 Time: {appointment.bookedTime ? formatTime(appointment.bookedTime) : 'No time'}
-                              </Typography>
-                              {appointment.notes && (
-                                <Typography variant="body2" color="text.secondary">
-                                  📝 Notes: {appointment.notes}
-                                </Typography>
-                              )}
-                            </Box>
+                            )}
                           </Box>
-                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                            <Chip
-                              label={appointment.bookingStatus || "PASSED"}
-                              color={appointment.bookingStatus === "COMPLETED" ? "success" : "default"}
-                              size="small"
-                            />
-                          </Box>
-                        </ListItem>
-                        {index < completedAppointments.length - 1 && <Divider sx={{ my: 1 }} />}
-                      </Box>
-                    ))}
-                  </List>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
+                        </Box>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                          <Chip
+                            label={appointment.bookingStatus || 'PASSED'}
+                            color={appointment.bookingStatus === 'COMPLETED' ? 'success' : 'default'}
+                            size="small"
+                          />
+                        </Box>
+                      </ListItem>
+                      {index < completedAppointments.length - 1 && <Divider sx={{ my: 1 }} />}
+                    </Box>
+                  ))}
+                </List>
+              )}
+            </Box>
 
-          {/* Completed Bookings */}
-          <Grid item xs={12} md={4}>
-            <Card elevation={3} sx={{ height: 'fit-content', minHeight: 400 }}>
-              <CardContent sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <CheckCircle sx={{ color: 'success.main', mr: 1 }} />
-                  <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
-                    Today's Completed Bookings
-                  </Typography>
-                </Box>
-                <Divider sx={{ mb: 2 }} />
-                
-                {allCompletedAppointments.filter(apt => {
-                  if (!apt.bookedDate) return false;
-                  const today = new Date();
-                  const appointmentDate = new Date(apt.bookedDate);
-                  return appointmentDate.getDate() === today.getDate() &&
-                         appointmentDate.getMonth() === today.getMonth() &&
-                         appointmentDate.getFullYear() === today.getFullYear();
-                }).length === 0 ? (
-                  <Alert severity="info" sx={{ mt: 2 }}>
-                    No completed bookings for today yet.
-                  </Alert>
-                ) : (
-                  <List sx={{ p: 0 }}>
-                    {allCompletedAppointments.filter(apt => {
-                      if (!apt.bookedDate) return false;
-                      const today = new Date();
-                      const appointmentDate = new Date(apt.bookedDate);
-                      return appointmentDate.getDate() === today.getDate() &&
-                             appointmentDate.getMonth() === today.getMonth() &&
-                             appointmentDate.getFullYear() === today.getFullYear();
-                    }).map((appointment, index, filteredArray) => (
-                      <Box key={appointment.id}>
-                        <ListItem sx={{ 
-                          p: 2, 
-                          mb: 1, 
-                          borderRadius: 1,
+            <Box
+              id="today-panel-2"
+              role="tabpanel"
+              aria-labelledby="today-tab-2"
+              hidden={todayTab !== 2}
+            >
+              {todaysCompletedBookings.length === 0 ? (
+                <Alert severity="info" sx={{ mt: 0 }}>
+                  No completed bookings for today yet.
+                </Alert>
+              ) : (
+                <List sx={{ p: 0 }}>
+                  {todaysCompletedBookings.map((appointment, index) => (
+                    <Box key={appointment.id}>
+                      <ListItem
+                        sx={{
+                          p: 2,
+                          mb: 1,
+                          borderRadius: 2,
                           backgroundColor: 'background.paper',
                           border: '1px solid',
-                          borderColor: 'divider'
-                        }}>
-                          <Box sx={{ flex: 1 }}>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                              {appointment.fullName}
+                          borderColor: 'divider',
+                          boxShadow: (theme) =>
+                            theme.palette.mode === 'dark' ? 'none' : '0 1px 2px rgba(15,23,42,0.06)',
+                        }}
+                      >
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                            {appointment.fullName}
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              📅 Date: {appointment.bookedDate ? formatDate(appointment.bookedDate) : 'No date'}
                             </Typography>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              🕐 Time: {appointment.bookedTime ? formatTime(appointment.bookedTime) : 'No time'}
+                            </Typography>
+                            {appointment.notes && (
                               <Typography variant="body2" color="text.secondary">
-                                📅 Date: {appointment.bookedDate ? formatDate(appointment.bookedDate) : 'No date'}
+                                📝 Notes: {appointment.notes}
                               </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                🕐 Time: {appointment.bookedTime ? formatTime(appointment.bookedTime) : 'No time'}
-                              </Typography>
-                              {appointment.notes && (
-                                <Typography variant="body2" color="text.secondary">
-                                  📝 Notes: {appointment.notes}
-                                </Typography>
-                              )}
-                            </Box>
+                            )}
                           </Box>
-                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                            <Chip
-                              label="COMPLETED"
-                              color="success"
-                              size="small"
-                            />
-                          </Box>
-                        </ListItem>
-                        {index < filteredArray.length - 1 && <Divider sx={{ my: 1 }} />}
-                      </Box>
-                    ))}
-                  </List>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-
-
-        </Grid>
+                        </Box>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                          <Chip label="COMPLETED" color="success" size="small" />
+                        </Box>
+                      </ListItem>
+                      {index < todaysCompletedBookings.length - 1 && <Divider sx={{ my: 1 }} />}
+                    </Box>
+                  ))}
+                </List>
+              )}
+            </Box>
+          </CardContent>
+        </Card>
       </Container>
 
       {/* Welcome Dialog */}

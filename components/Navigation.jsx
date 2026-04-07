@@ -9,7 +9,6 @@ import {
   Button,
   Box,
   Avatar,
-  Chip,
   IconButton,
   Menu,
   MenuItem,
@@ -60,6 +59,14 @@ export default function Navigation() {
   const handleLogoutCancel = () => {
     setLogoutDialogOpen(false);
   };
+
+  const displayName =
+    user.fullName ||
+    user.name ||
+    user.firstName ||
+    user.displayName ||
+    (user.email ? user.email.split('@')[0] : '') ||
+    'Account';
 
   return (
     <AppBar
@@ -137,19 +144,9 @@ export default function Navigation() {
             <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
               <PersonIcon />
             </Avatar>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {user.name}
-              </Typography>
-              {isAdmin && (
-                <Chip
-                  label="Admin"
-                  size="small"
-                  color="secondary"
-                  sx={{ height: 20, fontSize: '0.7rem' }}
-                />
-              )}
-            </Box>
+            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+              {displayName}
+            </Typography>
             <IconButton
               size="small"
               onClick={handleMenuOpen}
