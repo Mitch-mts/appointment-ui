@@ -1,5 +1,20 @@
+# Dependencies & build output
 node_modules
 .next
+out
+
+# Git & IDE
 .git
-Dockerfile
-npm-debug.log
+.gitignore
+.cursor
+*.md
+
+# Env (inject via Docker / compose instead)
+.env
+.env.*
+!.env.example
+
+# Misc
+coverage
+npm-debug.log*
+.DS_Store

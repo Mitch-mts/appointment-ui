@@ -6,18 +6,26 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Grid,
+  IconButton,
   Paper,
+  Stack,
   TextField,
   Typography,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { DeleteOutline } from '@mui/icons-material';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import {
+  ChevronLeft,
+  ChevronRight,
+  DeleteOutline,
+} from '@mui/icons-material';
 import Navigation from '../../../components/Navigation.jsx';
 import ProviderAvailabilityPicker from '../../../components/ProviderAvailabilityPicker.jsx';
 import { useAuth } from '../../../contexts/AuthContext.jsx';
@@ -33,8 +41,20 @@ const EMPTY_FORM = {
   availability: '',
 };
 
+function chunkList(items, size) {
+  if (size < 1) return [];
+  const chunks = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
 export default function AdminProvidersPage() {
   const theme = useTheme();
+  const isXs = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMdDown = useMediaQuery(theme.breakpoints.down('md'));
+  const slidePageSize = isXs ? 1 : isMdDown ? 2 : 3;
   const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
   const [providers, setProviders] = useState([]);
@@ -44,6 +64,7 @@ export default function AdminProvidersPage() {
   const [editingProvider, setEditingProvider] = useState(null);
   const [providerToDelete, setProviderToDelete] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [providerSlideIndex, setProviderSlideIndex] = useState(0);
 
   const loadProviders = useCallback(async () => {
     setListLoading(true);
@@ -85,6 +106,17 @@ export default function AdminProvidersPage() {
       ),
     [providers]
   );
+
+  const providerPages = useMemo(
+    () => chunkList(sortedProviders, slidePageSize),
+    [sortedProviders, slidePageSize]
+  );
+
+  useEffect(() => {
+    setProviderSlideIndex((prev) =>
+      Math.min(prev, Math.max(0, providerPages.length - 1))
+    );
+  }, [providerPages.length]);
 
   const handleFormChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -135,7 +167,14 @@ export default function AdminProvidersPage() {
   };
 
   const handleOpenEdit = (provider) => {
-    setEditingProvider({ ...provider });
+    const str = (v) => (v == null ? '' : typeof v === 'string' ? v : String(v));
+    setEditingProvider({
+      ...provider,
+      title: str(provider.title),
+      fullName: str(provider.fullName),
+      service: str(provider.service),
+      availability: str(provider.availability),
+    });
     setError('');
   };
 
@@ -156,16 +195,26 @@ export default function AdminProvidersPage() {
     try {
       const id = editingProvider.id;
       const payload = {
-        title: editingProvider.title.trim(),
-        fullName: editingProvider.fullName.trim(),
-        service: editingProvider.service.trim(),
-        availability: editingProvider.availability.trim(),
+        title: (editingProvider.title ?? '').trim(),
+        fullName: (editingProvider.fullName ?? '').trim(),
+        service: (editingProvider.service ?? '').trim(),
+        availability: (editingProvider.availability ?? '').trim(),
       };
       const res = await providerAPI.updateProvider(id, payload);
-      if (res?.success && res.data) {
-        setProviders((prev) =>
-          prev.map((p) => (p.id === id ? res.data : p))
-        );
+      if (res?.success) {
+        if (res.data) {
+          setProviders((prev) =>
+            prev.map((p) =>
+              String(p.id) === String(id) ? res.data : p
+            )
+          );
+        } else {
+          setProviders((prev) =>
+            prev.map((p) =>
+              String(p.id) === String(id) ? { ...p, ...payload } : p
+            )
+          );
+        }
         setEditingProvider(null);
       } else {
         setError(res?.message || 'Failed to update provider.');
@@ -193,7 +242,9 @@ export default function AdminProvidersPage() {
     try {
       const res = await providerAPI.deleteProvider(providerId);
       if (res?.success) {
-        setProviders((prev) => prev.filter((p) => p.id !== providerId));
+        setProviders((prev) =>
+          prev.filter((p) => String(p.id) !== String(providerId))
+        );
         setProviderToDelete(null);
       } else {
         setError(res?.message || 'Failed to remove provider.');
@@ -306,71 +357,310 @@ export default function AdminProvidersPage() {
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
             <CircularProgress />
           </Box>
+        ) : sortedProviders.length === 0 ? (
+          <Typography color="text.secondary" sx={{ py: 4 }}>
+            No providers yet. Add one above.
+          </Typography>
         ) : (
-          <Grid container spacing={3}>
-            {sortedProviders.map((provider) => (
-              <Grid item xs={12} md={6} lg={4} key={provider.id}>
-                <Paper
-                  elevation={2}
-                  sx={{ p: 3, borderRadius: 3, height: '100%' }}
+          <Box sx={{ mt: 1 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+              Provider directory
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              {slidePageSize} per slide · use arrows or dots to move between pages
+            </Typography>
+
+            <Box
+              sx={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                gap: { xs: 0.5, sm: 1 },
+              }}
+            >
+              <IconButton
+                aria-label="Previous providers"
+                onClick={() =>
+                  setProviderSlideIndex((i) => Math.max(0, i - 1))
+                }
+                disabled={providerSlideIndex <= 0 || saving}
+                sx={{
+                  flexShrink: 0,
+                  bgcolor: 'background.paper',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  boxShadow: 1,
+                  '&:hover': { bgcolor: 'action.hover' },
+                }}
+              >
+                <ChevronLeft />
+              </IconButton>
+
+              <Box
+                sx={{
+                  flex: 1,
+                  overflow: 'hidden',
+                  borderRadius: 3,
+                  minWidth: 0,
+                }}
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    transition: theme.transitions.create('transform', {
+                      duration: theme.transitions.duration.standard,
+                      easing: theme.transitions.easing.easeOut,
+                    }),
+                    transform: `translateX(-${providerSlideIndex * 100}%)`,
+                  }}
                 >
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                    {providerDisplayName(provider)}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 1 }}
-                  >
-                    <strong>Status:</strong> {provider.status || '—'}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 0.5 }}
-                  >
-                    <strong>Service:</strong> {provider.service}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 0.5 }}
-                  >
-                    <strong>Availability:</strong>{' '}
-                    {provider.availability || 'Not set'}
-                  </Typography>
-                  <Box sx={{ mt: 2 }}>
-                    <Button
-                      variant="outlined"
-                      onClick={() => handleOpenEdit(provider)}
-                      disabled={saving}
+                  {providerPages.map((group, pageIdx) => (
+                    <Box
+                      key={pageIdx}
                       sx={{
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        fontWeight: 700,
+                        minWidth: '100%',
+                        flexShrink: 0,
+                        display: 'grid',
+                        gap: 2,
+                        px: { xs: 0.5, sm: 1 },
+                        boxSizing: 'border-box',
+                        alignItems: 'stretch',
+                        gridTemplateColumns: `repeat(${slidePageSize}, minmax(0, 1fr))`,
                       }}
                     >
-                      Edit provider
-                    </Button>
-                    <Button
-                      color="error"
-                      variant="text"
-                      onClick={() => setProviderToDelete(provider)}
-                      disabled={saving}
-                      sx={{
-                        ml: 1,
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        fontWeight: 700,
-                      }}
-                    >
-                      Remove
-                    </Button>
-                  </Box>
-                </Paper>
-              </Grid>
-            ))}
-          </Grid>
+                      {Array.from({ length: slidePageSize }, (_, slotIdx) => {
+                        const provider = group[slotIdx];
+                        if (!provider) {
+                          return (
+                            <Box
+                              key={`slot-${pageIdx}-${slotIdx}`}
+                              aria-hidden
+                              sx={{ minWidth: 0, minHeight: 0 }}
+                            />
+                          );
+                        }
+
+                        const statusLabel = provider.status?.trim() || 'Active';
+                        const serviceLabel =
+                          (provider.service || 'Service').trim() || '—';
+                        const availRaw =
+                          (provider.availability || 'Not set').trim();
+
+                        return (
+                          <Paper
+                            key={provider.id}
+                            elevation={2}
+                            sx={{
+                              p: 3,
+                              borderRadius: 3,
+                              minWidth: 0,
+                              height: '100%',
+                              minHeight: { xs: 260, sm: 280 },
+                              display: 'flex',
+                              flexDirection: 'column',
+                              boxSizing: 'border-box',
+                            }}
+                          >
+                            <Typography
+                              variant="h6"
+                              sx={{ fontWeight: 700, lineHeight: 1.3 }}
+                            >
+                              {providerDisplayName(provider)}
+                            </Typography>
+
+                            <Stack
+                              direction="column"
+                              spacing={1.25}
+                              sx={{
+                                mt: 1.5,
+                                flex: '1 1 auto',
+                                alignItems: 'stretch',
+                                minWidth: 0,
+                              }}
+                            >
+                              <Box>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}
+                                >
+                                  Status
+                                </Typography>
+                                <Chip
+                                  size="small"
+                                  label={statusLabel}
+                                  color="primary"
+                                  variant="outlined"
+                                  sx={{
+                                    fontWeight: 600,
+                                    width: '100%',
+                                    justifyContent: 'flex-start',
+                                    height: 'auto',
+                                    minHeight: 32,
+                                    '& .MuiChip-label': {
+                                      textAlign: 'left',
+                                      whiteSpace: 'normal',
+                                      py: 0.5,
+                                    },
+                                  }}
+                                />
+                              </Box>
+                              <Box>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}
+                                >
+                                  Service
+                                </Typography>
+                                <Chip
+                                  size="small"
+                                  label={serviceLabel}
+                                  variant="filled"
+                                  sx={{
+                                    fontWeight: 600,
+                                    width: '100%',
+                                    justifyContent: 'flex-start',
+                                    height: 'auto',
+                                    minHeight: 32,
+                                    '& .MuiChip-label': {
+                                      textAlign: 'left',
+                                      whiteSpace: 'normal',
+                                      py: 0.5,
+                                    },
+                                  }}
+                                />
+                              </Box>
+                              <Box>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}
+                                >
+                                  Availability
+                                </Typography>
+                                <Chip
+                                  size="small"
+                                  label={availRaw}
+                                  variant="outlined"
+                                  sx={{
+                                    fontWeight: 600,
+                                    width: '100%',
+                                    justifyContent: 'flex-start',
+                                    height: 'auto',
+                                    minHeight: 32,
+                                    alignItems: 'flex-start',
+                                    '& .MuiChip-label': {
+                                      textAlign: 'left',
+                                      whiteSpace: 'normal',
+                                      py: 0.5,
+                                      overflow: 'visible',
+                                    },
+                                  }}
+                                />
+                              </Box>
+                            </Stack>
+
+                            <Box sx={{ mt: 'auto', pt: 2 }}>
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={() => handleOpenEdit(provider)}
+                                disabled={saving}
+                                sx={{
+                                  borderRadius: 2,
+                                  textTransform: 'none',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                Edit provider
+                              </Button>
+                              <Button
+                                color="error"
+                                variant="text"
+                                size="small"
+                                onClick={() => setProviderToDelete(provider)}
+                                disabled={saving}
+                                sx={{
+                                  ml: 1,
+                                  borderRadius: 2,
+                                  textTransform: 'none',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                Remove
+                              </Button>
+                            </Box>
+                          </Paper>
+                        );
+                      })}
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+
+              <IconButton
+                aria-label="Next providers"
+                onClick={() =>
+                  setProviderSlideIndex((i) =>
+                    Math.min(providerPages.length - 1, i + 1)
+                  )
+                }
+                disabled={
+                  providerSlideIndex >= providerPages.length - 1 || saving
+                }
+                sx={{
+                  flexShrink: 0,
+                  bgcolor: 'background.paper',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  boxShadow: 1,
+                  '&:hover': { bgcolor: 'action.hover' },
+                }}
+              >
+                <ChevronRight />
+              </IconButton>
+            </Box>
+
+            {providerPages.length > 1 && (
+              <Stack
+                direction="row"
+                spacing={1}
+                justifyContent="center"
+                alignItems="center"
+                sx={{ mt: 2 }}
+              >
+                {providerPages.map((_, dotIdx) => (
+                  <Box
+                    key={dotIdx}
+                    component="button"
+                    type="button"
+                    aria-label={`Go to page ${dotIdx + 1}`}
+                    onClick={() => setProviderSlideIndex(dotIdx)}
+                    sx={{
+                      p: 0,
+                      border: 'none',
+                      cursor: 'pointer',
+                      width: dotIdx === providerSlideIndex ? 10 : 8,
+                      height: dotIdx === providerSlideIndex ? 10 : 8,
+                      borderRadius: '50%',
+                      bgcolor:
+                        dotIdx === providerSlideIndex
+                          ? 'primary.main'
+                          : 'action.disabledBackground',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        bgcolor:
+                          dotIdx === providerSlideIndex
+                            ? 'primary.dark'
+                            : 'action.hover',
+                      },
+                    }}
+                  />
+                ))}
+              </Stack>
+            )}
+          </Box>
         )}
       </main>
 

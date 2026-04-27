@@ -1,7 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 import { authAPI, userAPI } from '../lib/api';
+import { clearAuthSession, isJwtExpired, isAuthOptionalPath } from '../lib/authSession';
 
 const AuthContext = createContext(undefined);
 
@@ -14,35 +16,55 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
+  const pathname = usePathname();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const enforceFreshTokenOrLogout = useCallback(() => {
+    const token = localStorage.getItem('token');
+    if (!token || !isJwtExpired(token)) return;
+    const path = typeof window !== 'undefined' ? window.location.pathname : pathname || '/';
+    const hardRedirect = !isAuthOptionalPath(path);
+    clearAuthSession({ redirectToLogin: hardRedirect });
+    if (!hardRedirect) {
+      setUser(null);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     const initializeAuth = async () => {
       const token = localStorage.getItem('token');
       const savedUser = localStorage.getItem('user');
-      
+      const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+
+      if (token && isJwtExpired(token)) {
+        clearAuthSession({ redirectToLogin: !isAuthOptionalPath(path) });
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
       if (token && savedUser) {
         try {
           const userData = JSON.parse(savedUser);
           setUser(userData);
-          
-          // Verify token is still valid
+
           const response = await userAPI.getProfile();
           if (response.success && response.data) {
             setUser(response.data);
             localStorage.setItem('user', JSON.stringify(response.data));
           } else {
-            // Token is invalid, clear storage
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
+            clearAuthSession({ redirectToLogin: false });
             setUser(null);
           }
         } catch (error) {
           console.error('Error initializing auth:', error);
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setUser(null);
+          if (error.response?.status !== 401) {
+            clearAuthSession({ redirectToLogin: false });
+            setUser(null);
+          } else {
+            setUser(null);
+          }
         }
       }
       setLoading(false);
@@ -50,6 +72,23 @@ export const AuthProvider = ({ children }) => {
 
     initializeAuth();
   }, []);
+
+  useEffect(() => {
+    if (!user) return undefined;
+    const id = setInterval(enforceFreshTokenOrLogout, 60_000);
+    return () => clearInterval(id);
+  }, [user, enforceFreshTokenOrLogout]);
+
+  useEffect(() => {
+    if (!user) return undefined;
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        enforceFreshTokenOrLogout();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [user, enforceFreshTokenOrLogout]);
 
   const login = async (email, password) => {
     try {
@@ -75,9 +114,21 @@ export const AuthProvider = ({ children }) => {
       return { success: false, error: response.message || 'Login failed' };
     } catch (error) {
       console.error('Login error:', error);
-      return { 
-        success: false, 
-        error: error.response?.data?.message || error.message || 'An error occurred during login'
+      const status = error.response?.status;
+      if (status === 404) {
+        return {
+          success: false,
+          error:
+            error.response?.data?.message ||
+            'Login service not found (404). Set NEXT_PUBLIC_API_AUTH_LOGIN to your backend path (e.g. auth/login) and ensure NEXT_PUBLIC_API_URL/BACKEND_URL matches the API.',
+        };
+      }
+      return {
+        success: false,
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          'An error occurred during login',
       };
     }
   };

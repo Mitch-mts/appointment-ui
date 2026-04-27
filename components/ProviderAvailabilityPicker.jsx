@@ -18,6 +18,13 @@ import {
   parseIsoDateAvailability,
 } from '../lib/providerAvailability.js';
 
+/** API may send availability as non-string; never call string methods blindly. */
+function availabilityToString(value) {
+  if (value == null || value === '') return '';
+  if (typeof value === 'string') return value;
+  return String(value);
+}
+
 export default function ProviderAvailabilityPicker({
   value,
   onChange,
@@ -39,7 +46,7 @@ export default function ProviderAvailabilityPicker({
   }, [dayStart, dayEnd, timeStart, timeEnd]);
 
   useEffect(() => {
-    const v = (value ?? '').trim();
+    const v = availabilityToString(value).trim();
     const parsed = parseDayRangeAvailability(v);
     if (parsed) {
       setDayStart(parsed.dayStart);
@@ -67,7 +74,7 @@ export default function ProviderAvailabilityPicker({
 
   useEffect(() => {
     if (!combined) return;
-    const v = (value ?? '').trim();
+    const v = availabilityToString(value).trim();
     if (!v) return;
     if (combined === v) return;
     const isDay = parseDayRangeAvailability(v);
@@ -100,12 +107,12 @@ export default function ProviderAvailabilityPicker({
     setTimeEnd(e.target.value);
   };
 
-  const vTrim = (value ?? '').trim();
+  const vTrim = availabilityToString(value).trim();
   const legacyFreeText =
     Boolean(vTrim) &&
-    !parseDayRangeAvailability(value) &&
-    !parseIsoDateAvailability(value);
-  const legacyIso = Boolean(vTrim) && parseIsoDateAvailability(value);
+    !parseDayRangeAvailability(vTrim) &&
+    !parseIsoDateAvailability(vTrim);
+  const legacyIso = Boolean(vTrim) && parseIsoDateAvailability(vTrim);
 
   return (
     <Box

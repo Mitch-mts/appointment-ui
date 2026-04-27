@@ -1,8 +1,24 @@
-version: "3"
+# Appointment booking frontend (Next.js).
+# Set BACKEND_URL to your Java API base including /v1 (same as next.config rewrites).
 
 services:
-  nextjs:
-    build: .
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Reach host machine from the container (Mac/Windows Docker Desktop).
+        # For Linux, use your host IP or add extra_hosts (see Docker docs).
+        BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:8079/v1}
     ports:
-      - "3002:3000"
-    restart: always
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+    restart: unless-stopped
+  # If the API runs in Compose, add a backend service and set build.args.BACKEND_URL to http://backend:8079/v1 (rebuild web).
+  # backend:
+  #   image: your-registry/appointment-api:latest
+  #   ports:
+  #     - "8079:8079"
+  #   environment:
+  #     SPRING_PROFILES_ACTIVE: docker
