@@ -20,13 +20,10 @@ export default function HomePage() {
     }
   }, [user, loading, router]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-sky-600 dark:border-cyan-400" />
-      </div>
-    );
-  }
+  useEffect(() => {
+    router.prefetch('/login');
+    router.prefetch('/register');
+  }, [router]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -59,12 +56,14 @@ export default function HomePage() {
             <ColorModeToggle />
             <Link
               href="/login"
+              prefetch
               className="hidden rounded-full px-4 py-2 text-sm font-medium text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:ring-slate-600 dark:hover:bg-slate-800 dark:hover:text-white sm:inline-block"
             >
               Sign in
             </Link>
             <Link
               href={user ? '/dashboard' : '/register'}
+              prefetch={!user}
               className="rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-sky-200 transition hover:bg-sky-600 dark:shadow-sky-900/40"
             >
               {user ? 'Go to dashboard' : 'Book now'}
@@ -100,12 +99,12 @@ export default function HomePage() {
               >
                 {user ? 'Open schedule' : 'Make an appointment'}
               </Link>
-              <button
-                type="button"
+              <Link
+                href="/demo"
                 className="inline-flex items-center justify-center rounded-full px-7 py-3 text-sm font-medium text-sky-700 ring-1 ring-sky-200 transition hover:bg-sky-50 dark:text-sky-300 dark:ring-sky-700 dark:hover:bg-sky-950/50"
               >
                 Watch how it works
-              </button>
+              </Link>
             </div>
 
             <dl className="mt-4 grid grid-cols-3 gap-4 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">

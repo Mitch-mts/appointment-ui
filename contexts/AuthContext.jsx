@@ -1,9 +1,14 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { authAPI, userAPI } from '../lib/api';
-import { clearAuthSession, isJwtExpired, isAuthOptionalPath } from '../lib/authSession';
+import {
+  clearAuthSession,
+  isJwtExpired,
+  isAuthOptionalPath,
+  setRedirectToLoginHandler,
+} from '../lib/authSession';
 
 const AuthContext = createContext(undefined);
 
@@ -17,6 +22,7 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const pathname = usePathname();
+  const router = useRouter();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -30,6 +36,13 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
     }
   }, [pathname]);
+
+  useEffect(() => {
+    setRedirectToLoginHandler(() => {
+      router.push('/login');
+    });
+    return () => setRedirectToLoginHandler(null);
+  }, [router]);
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -46,28 +59,36 @@ export const AuthProvider = ({ children }) => {
 
       if (token && savedUser) {
         try {
-          const userData = JSON.parse(savedUser);
-          setUser(userData);
-
-          const response = await userAPI.getProfile();
-          if (response.success && response.data) {
-            setUser(response.data);
-            localStorage.setItem('user', JSON.stringify(response.data));
-          } else {
-            clearAuthSession({ redirectToLogin: false });
-            setUser(null);
-          }
-        } catch (error) {
-          console.error('Error initializing auth:', error);
-          if (error.response?.status !== 401) {
-            clearAuthSession({ redirectToLogin: false });
-            setUser(null);
-          } else {
-            setUser(null);
-          }
+          setUser(JSON.parse(savedUser));
+        } catch {
+          clearAuthSession({ redirectToLogin: false });
+          setUser(null);
         }
       }
+
+      // Unblock UI immediately; refresh profile in the background.
       setLoading(false);
+
+      if (!token || !savedUser) return;
+
+      try {
+        const response = await userAPI.getProfile();
+        if (response.success && response.data) {
+          setUser(response.data);
+          localStorage.setItem('user', JSON.stringify(response.data));
+        } else {
+          clearAuthSession({ redirectToLogin: false });
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (error.response?.status !== 401) {
+          clearAuthSession({ redirectToLogin: false });
+          setUser(null);
+        } else {
+          setUser(null);
+        }
+      }
     };
 
     initializeAuth();

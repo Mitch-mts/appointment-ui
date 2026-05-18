@@ -51,10 +51,7 @@ export default function RegisterForm() {
       const result = await registerUser(data.name, data.email, data.password, data.confirmPassword);
       if (result.success) {
         setSuccess('Account created successfully! Redirecting to login...');
-        // Redirect to login page after successful registration
-        setTimeout(() => {
-          router.push('/login');
-        }, 1500);
+        router.push('/login');
       } else {
         setError(result.error || 'Registration failed. Please try again.');
       }
@@ -237,20 +234,12 @@ export default function RegisterForm() {
         <Box sx={{ textAlign: 'center', mt: 2 }}>
           <Typography variant="body2" color="text.secondary">
             Already have an account?{' '}
-            <Link href="/login" style={{ color: 'inherit', textDecoration: 'none' }}>
-              <Typography
-                component="span"
-                variant="body2"
-                sx={{
-                  color: 'primary.main',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    textDecoration: 'underline',
-                  },
-                }}
-              >
-                Sign in here
-              </Typography>
+            <Link
+              href="/login"
+              prefetch
+              className="font-medium text-sky-600 hover:underline dark:text-sky-400"
+            >
+              Sign in here
             </Link>
           </Typography>
         </Box>

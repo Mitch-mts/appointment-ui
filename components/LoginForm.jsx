@@ -46,10 +46,7 @@ export default function LoginForm() {
       const result = await login(data.email, data.password);
       if (result.success) {
         setSuccess('Login successful! Redirecting...');
-        // Redirect after a brief delay to show success message
-        setTimeout(() => {
-          router.push('/dashboard');
-        }, 1000);
+        router.push('/dashboard');
       } else {
         setError(result.error || 'Invalid email or password');
       }
@@ -170,21 +167,13 @@ export default function LoginForm() {
 
         <Box sx={{ textAlign: 'center', mt: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            Don't have an account?{' '}
-            <Link href="/register" style={{ color: 'inherit', textDecoration: 'none' }}>
-              <Typography
-                component="span"
-                variant="body2"
-                sx={{
-                  color: 'primary.main',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    textDecoration: 'underline',
-                  },
-                }}
-              >
-                Sign up here
-              </Typography>
+            Don&apos;t have an account?{' '}
+            <Link
+              href="/register"
+              prefetch
+              className="font-medium text-sky-600 hover:underline dark:text-sky-400"
+            >
+              Sign up here
             </Link>
           </Typography>
         </Box>

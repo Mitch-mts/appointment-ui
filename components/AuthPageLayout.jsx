@@ -1,11 +1,19 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import ColorModeToggle from './ColorModeToggle.jsx';
 
 export default function AuthPageLayout({ children }) {
   const { user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    router.prefetch('/login');
+    router.prefetch('/register');
+  }, [router]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
