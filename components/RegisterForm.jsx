@@ -50,8 +50,8 @@ export default function RegisterForm() {
     try {
       const result = await registerUser(data.name, data.email, data.password, data.confirmPassword);
       if (result.success) {
-        setSuccess('Account created successfully! Redirecting to login...');
-        router.push('/login');
+        setSuccess('Account created successfully! Redirecting…');
+        router.push('/dashboard');
       } else {
         setError(result.error || 'Registration failed. Please try again.');
       }

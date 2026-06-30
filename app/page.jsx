@@ -1,32 +1,17 @@
-'use client';
-
-import { useEffect } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '../contexts/AuthContext.jsx';
 import { Calendar, Users, Shield } from 'lucide-react';
 import ColorModeToggle from '../components/ColorModeToggle.jsx';
+import LandingRoutePrefetch from '../components/LandingRoutePrefetch.jsx';
+import LandingAuthRedirect from '../components/LandingAuthRedirect.jsx';
+import LandingHeaderActions from '../components/LandingHeaderActions.jsx';
+import LandingHeroCTA from '../components/LandingHeroCTA.jsx';
 
 export default function HomePage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  // If the user is already authenticated, send them to the dashboard,
-  // otherwise keep them on the marketing landing page.
-  useEffect(() => {
-    if (!loading && user) {
-      router.push('/dashboard');
-    }
-  }, [user, loading, router]);
-
-  useEffect(() => {
-    router.prefetch('/login');
-    router.prefetch('/register');
-  }, [router]);
-
   return (
     <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <LandingRoutePrefetch />
+      <LandingAuthRedirect />
+
       {/* Soft illustration-style background */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl dark:bg-sky-900/40" />
@@ -51,23 +36,10 @@ export default function HomePage() {
               </span>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2 sm:gap-3">
             <ColorModeToggle />
-            <Link
-              href="/login"
-              prefetch
-              className="hidden rounded-full px-4 py-2 text-sm font-medium text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:ring-slate-600 dark:hover:bg-slate-800 dark:hover:text-white sm:inline-block"
-            >
-              Sign in
-            </Link>
-            <Link
-              href={user ? '/dashboard' : '/register'}
-              prefetch={!user}
-              className="rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-sky-200 transition hover:bg-sky-600 dark:shadow-sky-900/40"
-            >
-              {user ? 'Go to dashboard' : 'Book now'}
-            </Link>
+            <LandingHeaderActions />
           </div>
         </div>
       </header>
@@ -92,20 +64,7 @@ export default function HomePage() {
               track.
             </p>
 
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <Link
-                href={user ? '/dashboard' : '/register'}
-                className="inline-flex items-center justify-center rounded-full bg-sky-500 px-7 py-3 text-sm font-semibold text-white shadow-md shadow-sky-200 transition hover:bg-sky-600 dark:shadow-sky-900/40"
-              >
-                {user ? 'Open schedule' : 'Make an appointment'}
-              </Link>
-              <Link
-                href="/demo"
-                className="inline-flex items-center justify-center rounded-full px-7 py-3 text-sm font-medium text-sky-700 ring-1 ring-sky-200 transition hover:bg-sky-50 dark:text-sky-300 dark:ring-sky-700 dark:hover:bg-sky-950/50"
-              >
-                Watch how it works
-              </Link>
-            </div>
+            <LandingHeroCTA />
 
             <dl className="mt-4 grid grid-cols-3 gap-4 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
               <div>

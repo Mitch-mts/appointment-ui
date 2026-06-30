@@ -1,6 +1,13 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useState,
+  useCallback,
+} from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { authAPI, userAPI } from '../lib/api';
 import {
@@ -9,6 +16,11 @@ import {
   isAuthOptionalPath,
   setRedirectToLoginHandler,
 } from '../lib/authSession';
+import {
+  hasCachedSession,
+  normalizeUserFromApi,
+  readCachedSessionUser,
+} from '../lib/sessionUser';
 
 const AuthContext = createContext(undefined);
 
@@ -25,6 +37,15 @@ export const AuthProvider = ({ children }) => {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Sync session from localStorage before paint (SSR leaves user null on first render).
+  useLayoutEffect(() => {
+    const cached = readCachedSessionUser();
+    if (cached) {
+      setUser(cached);
+      setLoading(false);
+    }
+  }, []);
 
   const enforceFreshTokenOrLogout = useCallback(() => {
     const token = localStorage.getItem('token');
@@ -57,35 +78,32 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      if (token && savedUser) {
+      const cached = readCachedSessionUser();
+      if (cached) {
+        setUser(cached);
+      } else if (token && savedUser) {
         try {
-          setUser(JSON.parse(savedUser));
+          const parsed = JSON.parse(savedUser);
+          if (parsed?.email) setUser(parsed);
         } catch {
           clearAuthSession({ redirectToLogin: false });
           setUser(null);
         }
       }
 
-      // Unblock UI immediately; refresh profile in the background.
       setLoading(false);
 
       if (!token || !savedUser) return;
 
       try {
-        const response = await userAPI.getProfile();
-        if (response.success && response.data) {
-          setUser(response.data);
-          localStorage.setItem('user', JSON.stringify(response.data));
-        } else {
-          clearAuthSession({ redirectToLogin: false });
-          setUser(null);
+        const freshUser = await userAPI.getProfileUser();
+        if (freshUser) {
+          setUser(freshUser);
+          localStorage.setItem('user', JSON.stringify(freshUser));
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
-        if (error.response?.status !== 401) {
-          clearAuthSession({ redirectToLogin: false });
-          setUser(null);
-        } else {
+        if (error.response?.status === 401) {
+          clearAuthSession({ redirectToLogin: !isAuthOptionalPath(path) });
           setUser(null);
         }
       }
@@ -114,7 +132,6 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const response = await authAPI.login({ email, password });
-      console.log(response);
       if (response.success && response.data) {
         const { token, userData } = response.data;
         localStorage.setItem('token', token);
@@ -154,25 +171,36 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (fullName, email, password) => {
+  const register = async (fullName, email, password, confirmPassword) => {
     try {
-      const response = await authAPI.register({ fullName, email, password, confirmPassword: password });
+      const response = await authAPI.register({
+        fullName,
+        email,
+        password,
+        confirmPassword: confirmPassword ?? password,
+      });
       if (response.success && response.data) {
-        const { token, userData } = response.data;
-        localStorage.setItem('token', token);
-        
-        if (userData) {
-          // Use the userData from the registration response
+        // Register returns the same envelope as login: { token, expiresIn, userData }
+        const payload = response.data;
+        const token = payload.token;
+        const userData = payload.userData ?? payload;
+
+        if (token && token.trim() !== '') {
+          localStorage.setItem('token', token);
+        } else {
+          localStorage.removeItem('token');
+        }
+
+        if (userData && typeof userData === 'object' && userData.email) {
           localStorage.setItem('user', JSON.stringify(userData));
           setUser(userData);
           return { success: true };
-        } else {
-          // Fallback: create limited user data if userData is not in response
-          const limitedUserData = { email, name: fullName };
-          localStorage.setItem('user', JSON.stringify(limitedUserData));
-          setUser(limitedUserData);
-          return { success: true };
         }
+
+        const limitedUserData = { email, fullName, name: fullName };
+        localStorage.setItem('user', JSON.stringify(limitedUserData));
+        setUser(limitedUserData);
+        return { success: true };
       }
       return { success: false, error: response.message || 'Registration failed' };
     } catch (error) {

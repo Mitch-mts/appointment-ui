@@ -1,55 +1,75 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext.jsx';
-import { useRouter } from 'next/navigation';
-import Navigation from '../../components/Navigation.jsx';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRequireAuth } from '../../hooks/useRequireAuth.js';
+import AppointmentsListSkeleton from '../../components/AppointmentsListSkeleton.jsx';
+import { hasCachedSession } from '../../lib/sessionUser.js';
 import AppointmentCard from '../../components/AppointmentCard.jsx';
+import RescheduleDialog from '../../components/RescheduleDialog.jsx';
 import { appointmentAPI } from '../../lib/api';
+import { collectAllPages } from '../../lib/pagination';
+import { providerAPI } from '../../lib/providers.js';
+import { buildProvidersMap } from '../../lib/appointmentHelpers.js';
 import { Plus, Filter } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AppointmentsPage() {
-  const { user, loading, isAdmin } = useAuth();
-  const router = useRouter();
+  const { user, isAdmin, showAuthSpinner, ready } = useRequireAuth();
   const [appointments, setAppointments] = useState([]);
-  const [loadingAppointments, setLoadingAppointments] = useState(true);
+  const [loadingAppointments, setLoadingAppointments] = useState(false);
+  const fetchGeneration = useRef(0);
+  const hasListData = useRef(false);
   const [filter, setFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [providersById, setProvidersById] = useState({});
+  const [rescheduleTarget, setRescheduleTarget] = useState(null);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
+  const userEmail = user?.email;
 
-  useEffect(() => {
-    if (user) {
-      fetchAppointments();
-    }
-  }, [user]);
-
-  const fetchAppointments = async () => {
+  const fetchProviders = useCallback(async () => {
     try {
-      let response;
-      if (isAdmin) {
-        // Admin sees all appointments
-        response = await appointmentAPI.getAllAppointments();
-      } else {
-        // Regular users see only their own appointments
-        response = await appointmentAPI.getUserAppointments(user.email);
+      const res = await providerAPI.listProviders();
+      if (res?.success && Array.isArray(res.data)) {
+        setProvidersById(buildProvidersMap(res.data));
       }
-      
-      if (response.success && response.data) {
-        setAppointments(response.data);
-      }
+    } catch {
+      setProvidersById({});
+    }
+  }, []);
+
+  const fetchAppointments = useCallback(async () => {
+    if (!userEmail) return;
+
+    const generation = ++fetchGeneration.current;
+    if (!hasListData.current) setLoadingAppointments(true);
+
+    try {
+      const items = isAdmin
+        ? await collectAllPages((page) =>
+            appointmentAPI.getAllAppointments({ page, size: 50 })
+          )
+        : await collectAllPages((page) =>
+            appointmentAPI.getUserAppointments(userEmail, { page, size: 50 })
+          );
+      if (generation !== fetchGeneration.current) return;
+      setAppointments(items);
+      hasListData.current = items.length > 0;
     } catch (error) {
+      if (generation !== fetchGeneration.current) return;
       console.error('Error fetching appointments:', error);
     } finally {
-      setLoadingAppointments(false);
+      if (generation === fetchGeneration.current) {
+        setLoadingAppointments(false);
+      }
     }
-  };
+  }, [userEmail, isAdmin]);
+
+  useEffect(() => {
+    if (!userEmail) return;
+    fetchAppointments();
+    fetchProviders();
+  }, [userEmail, isAdmin, fetchAppointments, fetchProviders]);
 
   const handleCancelAppointment = async (id) => {
     try {
@@ -106,7 +126,11 @@ export default function AppointmentsPage() {
       case 'cancelled':
         return appointment.bookingStatus === 'CANCELLED';
       case 'pending':
-        return appointment.bookingStatus === 'PENDING' || appointment.bookingStatus === null;
+        return (
+          appointment.bookingStatus === 'PENDING' ||
+          appointment.bookingStatus === 'SCHEDULED' ||
+          appointment.bookingStatus === null
+        );
       default:
         return true;
     }
@@ -127,31 +151,14 @@ export default function AppointmentsPage() {
     setCurrentPage(1);
   }, [filter]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-sky-600 dark:border-cyan-400" />
-      </div>
-    );
+  if (showAuthSpinner && !hasCachedSession()) {
+    return <AppointmentsListSkeleton />;
   }
-
-  if (!user) {
-    return null;
-  }
+  if (!ready) return null;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      {/* Soft illustration-style background to match landing/auth pages */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl dark:bg-sky-900/40" />
-        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl dark:bg-indigo-900/30" />
-        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl dark:bg-blue-900/25" />
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" />
-      </div>
-
-      <Navigation />
-      
-      <div className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <>
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Appointments</h1>
@@ -161,6 +168,7 @@ export default function AppointmentsPage() {
           </div>
           <Link
             href="/appointments/book"
+            prefetch
             className="btn-primary flex items-center space-x-2"
           >
             <Plus className="h-5 w-5" />
@@ -176,10 +184,10 @@ export default function AppointmentsPage() {
             <div className="flex space-x-2">
               {[
                 { key: 'all', label: 'All' },
-                { key: 'pending', label: 'Pending' },
+                { key: 'pending', label: 'Upcoming' },
+                { key: 'scheduled', label: 'Scheduled' },
                 { key: 'completed', label: 'Completed' },
                 { key: 'cancelled', label: 'Cancelled' },
-              
               ].map((filterOption) => (
                 <button
                   key={filterOption.key}
@@ -199,10 +207,11 @@ export default function AppointmentsPage() {
         </div>
 
         {/* Appointments List */}
-        {loadingAppointments ? (
-          <div className="py-12 text-center">
-            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary-600 dark:border-primary-400" />
-            <p className="mt-4 text-gray-600 dark:text-slate-400">Loading appointments...</p>
+        {loadingAppointments && appointments.length === 0 ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="card h-28 animate-pulse bg-slate-100 dark:bg-slate-800/60" />
+            ))}
           </div>
         ) : currentAppointments.length > 0 ? (
           <div className="space-y-3">
@@ -211,10 +220,12 @@ export default function AppointmentsPage() {
                 key={appointment.id}
                 appointment={appointment}
                 onCancel={handleCancelAppointment}
+                onReschedule={setRescheduleTarget}
                 onStatusChange={handleStatusChange}
                 onDelete={handleDeleteAppointment}
                 showUserInfo={isAdmin}
                 isAdmin={isAdmin}
+                providersById={providersById}
               />
             ))}
           </div>
@@ -288,6 +299,13 @@ export default function AppointmentsPage() {
           </div>
         )}
       </div>
-    </div>
+
+      <RescheduleDialog
+        open={Boolean(rescheduleTarget)}
+        appointment={rescheduleTarget}
+        onClose={() => setRescheduleTarget(null)}
+        onSuccess={fetchAppointments}
+      />
+    </>
   );
 }

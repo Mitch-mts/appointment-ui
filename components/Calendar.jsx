@@ -1,23 +1,31 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Calendar from 'react-calendar';
-import { format, parseISO, isSameDay, isToday, isAfter, startOfDay } from 'date-fns';
+import { format, isSameDay, isToday, isAfter, startOfDay } from 'date-fns';
 import { appointmentAPI } from '../lib/api';
-import { getTimeSlots, getAvailableTimeSlotsForDate, isTimeSlotAvailable } from '../lib/utils';
-import { 
-  Box, 
-  Paper, 
-  Typography, 
-  Button, 
+import { isTimeSlotAvailable } from '../lib/utils';
+import {
+  buildClientAvailabilityCalendar,
+  mergeAvailabilityCalendars,
+  getSlotsForDate,
+  isDateBookable,
+} from '../lib/slotAvailability';
+import {
+  Box,
+  Paper,
+  Typography,
+  Button,
   CircularProgress,
-  Chip
+  Alert,
 } from '@mui/material';
-import { 
-  Schedule, 
-  CheckCircle, 
-  Cancel 
-} from '@mui/icons-material';
+import { Schedule } from '@mui/icons-material';
+import 'react-calendar/dist/Calendar.css';
+
+function getEndOfCurrentYear() {
+  const y = new Date().getFullYear();
+  return new Date(y, 11, 31);
+}
 
 export default function AppointmentCalendar({
   selectedDate,
@@ -25,236 +33,218 @@ export default function AppointmentCalendar({
   onTimeSelect,
   selectedTime,
   showTimeSlots = false,
+  providerId = null,
+  provider = null,
   disabledDates = [],
 }) {
-  const [availableDates, setAvailableDates] = useState([]);
+  const [availabilityCalendar, setAvailabilityCalendar] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const loadedForProviderRef = useRef(null);
 
-  // Helper function to get the end of current year
-  const getEndOfCurrentYear = () => {
-    const currentYear = new Date().getFullYear();
-    return new Date(currentYear, 11, 31); // December 31st of current year
-  };
+  const maxDate = getEndOfCurrentYear();
 
   useEffect(() => {
-    const fetchAvailableDates = async () => {
-      setLoading(true);
+    if (!providerId) {
+      setAvailabilityCalendar([]);
+      setLoadError('');
+      setLoading(false);
+      loadedForProviderRef.current = null;
+      return;
+    }
+
+    let cancelled = false;
+    const showLoadingSpinner = loadedForProviderRef.current !== providerId;
+
+    const fetchAvailability = async () => {
+      if (showLoadingSpinner) setLoading(true);
+      setLoadError('');
+      const startDate = format(new Date(), 'yyyy-MM-dd');
+      const endDate = format(maxDate, 'yyyy-MM-dd');
+
+      const clientCalendar = buildClientAvailabilityCalendar(
+        provider,
+        startDate,
+        endDate
+      );
+
       try {
-        const startDate = format(new Date(), 'yyyy-MM-dd');
-        const endDate = format(getEndOfCurrentYear(), 'yyyy-MM-dd'); // End of current year
-        
-        const response = await appointmentAPI.getAvailableDates(startDate, endDate);
-        if (response.success && response.data) {
-          setAvailableDates(response.data);
+        const response = await appointmentAPI.getAvailableDates(
+          startDate,
+          endDate,
+          providerId
+        );
+
+        if (cancelled) return;
+
+        if (response?.success && Array.isArray(response.data)) {
+          setAvailabilityCalendar(
+            mergeAvailabilityCalendars(response.data, clientCalendar)
+          );
         } else {
-          // If API fails, create mock data for testing
-          const mockDates = [];
-          const today = new Date();
-          const endOfYear = getEndOfCurrentYear();
-          
-          for (let i = 0; i < 365; i++) {
-            const date = new Date(today);
-            date.setDate(today.getDate() + i);
-            
-            // Only add dates that are today or in the future, but within current year
-            if ((isAfter(startOfDay(date), startOfDay(today)) || isToday(date)) && date <= endOfYear) {
-              mockDates.push({
-                date: format(date, 'yyyy-MM-dd'),
-                availableSlots: getAvailableTimeSlotsForDate(date).map(time => ({
-                  time,
-                  available: Math.random() > 0.3 // 70% chance of being available
-                }))
-              });
-            }
-          }
-          setAvailableDates(mockDates);
+          setAvailabilityCalendar(clientCalendar);
+          setLoadError(
+            'Showing times from provider schedule. Live availability will apply when the server is updated.'
+          );
         }
-      } catch (error) {
-        console.error('Error fetching available dates:', error);
-        // Create mock data if API fails
-        const mockDates = [];
-        const today = new Date();
-        const endOfYear = getEndOfCurrentYear();
-        
-        for (let i = 0; i < 365; i++) {
-          const date = new Date(today);
-          date.setDate(today.getDate() + i);
-          
-          // Only add dates that are today or in the future, but within current year
-          if ((isAfter(startOfDay(date), startOfDay(today)) || isToday(date)) && date <= endOfYear) {
-            mockDates.push({
-              date: format(date, 'yyyy-MM-dd'),
-              availableSlots: getAvailableTimeSlotsForDate(date).map(time => ({
-                time,
-                available: Math.random() > 0.3 // 70% chance of being available
-              }))
-            });
-          }
+        if (!cancelled) loadedForProviderRef.current = providerId;
+      } catch {
+        if (!cancelled) {
+          setAvailabilityCalendar(clientCalendar);
+          setLoadError(
+            'Could not reach the server. Times are based on the provider schedule only.'
+          );
+          loadedForProviderRef.current = providerId;
         }
-        setAvailableDates(mockDates);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
-    fetchAvailableDates();
-  }, []);
+    fetchAvailability();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [providerId, provider, maxDate]);
+
+  const slotsForSelectedDate = useMemo(() => {
+    if (!selectedDate) return [];
+    return getSlotsForDate(availabilityCalendar, selectedDate);
+  }, [availabilityCalendar, selectedDate]);
 
   const isDateAvailable = (date) => {
-    // Don't allow past dates
-    if (isAfter(startOfDay(new Date()), startOfDay(date))) {
-      return false;
-    }
-    
-    // Don't allow dates beyond current year
-    const currentYear = new Date().getFullYear();
-    if (date.getFullYear() > currentYear) {
-      return false;
-    }
-    
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const availableDate = availableDates.find(d => d.date === dateStr);
-    
-    // For dates within the next 30 days, require API data
-    const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    if (date <= thirtyDaysFromNow) {
-      if (!availableDate) return false;
-      
-      // For today, check if there are any available time slots that haven't passed
-      if (isToday(date)) {
-        return availableDate.availableSlots.some(slot => 
-          slot.available && isTimeSlotAvailable(slot.time, date)
-        );
-      }
-      
-      // For near future dates, check if there are any available slots
-      return availableDate.availableSlots.some(slot => slot.available);
-    }
-    
-    // For dates beyond 30 days but within current year, assume they're available
-    return true;
-  };
-
-  const getAvailableSlotsForDate = (date) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const availableDate = availableDates.find(d => d.date === dateStr);
-    
-    // For dates beyond 30 days but within current year, return all time slots
-    const thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    if (date > thirtyDaysFromNow && date.getFullYear() === new Date().getFullYear()) {
-      return getTimeSlots(); // Return all available time slots from utils
-    }
-    
-    if (!availableDate) return [];
-    
-    // Filter out time slots that have passed for today
-    return availableDate.availableSlots.filter(slot => 
-      slot.available && isTimeSlotAvailable(slot.time, date)
-    );
+    if (isAfter(startOfDay(new Date()), startOfDay(date))) return false;
+    if (date.getFullYear() > new Date().getFullYear()) return false;
+    if (!providerId) return false;
+    return isDateBookable(availabilityCalendar, date);
   };
 
   const tileClassName = ({ date }) => {
-    const baseClasses = 'p-2 text-center';
-    
+    const base = 'p-2 text-center rounded-md text-sm';
+
     if (selectedDate && isSameDay(date, selectedDate)) {
-      return `${baseClasses} bg-primary-600 text-white rounded`;
+      return `${base} !bg-sky-600 !text-white`;
     }
-    
+
+    if (!providerId) {
+      return `${base} opacity-40 cursor-not-allowed`;
+    }
+
     if (isDateAvailable(date)) {
-      return `${baseClasses} bg-green-50 text-green-700 hover:bg-green-100 cursor-pointer`;
+      return `${base} bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-200 cursor-pointer`;
     }
-    
-    if (disabledDates.some(disabledDate => isSameDay(date, disabledDate))) {
-      return `${baseClasses} bg-gray-100 text-gray-400 cursor-not-allowed`;
+
+    if (disabledDates.some((d) => isSameDay(date, d))) {
+      return `${base} bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-slate-800`;
     }
-    
-    // Past dates should be disabled
+
     if (isAfter(startOfDay(new Date()), startOfDay(date))) {
-      return `${baseClasses} bg-gray-100 text-gray-400 cursor-not-allowed`;
+      return `${base} bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-slate-800`;
     }
-    
-    return `${baseClasses} hover:bg-gray-50 cursor-pointer`;
+
+    return `${base} text-slate-400 cursor-not-allowed`;
   };
 
-  const tileDisabled = ({ date }) => {
-    return !isDateAvailable(date) || 
-           disabledDates.some(disabledDate => isSameDay(date, disabledDate)) ||
-           isAfter(startOfDay(new Date()), startOfDay(date));
-  };
+  const tileDisabled = ({ date }) =>
+    !providerId ||
+    !isDateAvailable(date) ||
+    disabledDates.some((d) => isSameDay(date, d)) ||
+    isAfter(startOfDay(new Date()), startOfDay(date));
 
   const handleDateChange = (value) => {
-    if (value instanceof Date) {
-      onDateSelect(value);
-    }
+    if (value instanceof Date) onDateSelect(value);
   };
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Paper elevation={3} sx={{ p: 3, borderRadius: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Select Date
+      <Paper elevation={2} sx={{ p: 3, borderRadius: 3 }}>
+        <Typography variant="h6" gutterBottom fontWeight={700}>
+          Choose a date
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          You can book appointments for the current year only
+          {providerId
+            ? 'Green dates have open times for your selected provider.'
+            : 'Select a provider first to see available dates.'}
         </Typography>
+
+        {!providerId && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Pick a provider in the form to load the calendar.
+          </Alert>
+        )}
+
         <Calendar
           onChange={handleDateChange}
           value={selectedDate}
           tileClassName={tileClassName}
           tileDisabled={tileDisabled}
           minDate={new Date()}
-          maxDate={getEndOfCurrentYear()}
+          maxDate={maxDate}
           className="w-full border-0"
-          showNavigation={true}
-          showNeighboringMonth={true}
+          showNavigation
+          showNeighboringMonth={false}
           locale="en-US"
         />
+
+        {loadError && providerId && (
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            {loadError}
+          </Alert>
+        )}
       </Paper>
 
-      {showTimeSlots && selectedDate && (
-        <Paper elevation={3} sx={{ p: 3, borderRadius: 3 }}>
-          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-            <Schedule sx={{ mr: 1 }} />
-            Available Times for {format(selectedDate, 'MMM dd, yyyy')}
+      {showTimeSlots && selectedDate && providerId && (
+        <Paper elevation={2} sx={{ p: 3, borderRadius: 3 }}>
+          <Typography
+            variant="h6"
+            gutterBottom
+            fontWeight={700}
+            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+          >
+            <Schedule color="primary" />
+            Times for {format(selectedDate, 'EEEE, MMM d')}
           </Typography>
-          
+
           {loading ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
-              <CircularProgress size={40} />
+              <CircularProgress size={36} />
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                Loading available times...
+                Loading available times…
               </Typography>
             </Box>
+          ) : slotsForSelectedDate.length === 0 ? (
+            <Alert severity="info">
+              No open times on this day. Try another date.
+            </Alert>
           ) : (
-            <Box sx={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', 
-              gap: 1 
-            }}>
-              {getAvailableSlotsForDate(selectedDate).map((slot) => (
-                <Button
-                  key={slot.time}
-                  onClick={() => onTimeSelect?.(slot.time)}
-                  disabled={!slot.available}
-                  variant={selectedTime === slot.time ? "contained" : "outlined"}
-                  size="small"
-                  sx={{
-                    py: 1.5,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 0.5,
-                    minHeight: 48
-                  }}
-                >
-                  {slot.available ? (
-                    <CheckCircle sx={{ fontSize: 16 }} />
-                  ) : (
-                    <Cancel sx={{ fontSize: 16 }} />
-                  )}
-                  {slot.time}
-                </Button>
-              ))}
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+                gap: 1.5,
+              }}
+            >
+              {slotsForSelectedDate.map((slot) => {
+                const selected = selectedTime === slot.time;
+                const past = !isTimeSlotAvailable(slot.time, selectedDate);
+                return (
+                  <Button
+                    key={slot.time}
+                    onClick={() => onTimeSelect?.(slot.time)}
+                    disabled={past || !slot.available}
+                    variant={selected ? 'contained' : 'outlined'}
+                    size="medium"
+                    sx={{
+                      py: 1.25,
+                      fontWeight: selected ? 700 : 500,
+                      borderRadius: 2,
+                    }}
+                  >
+                    {slot.time}
+                  </Button>
+                );
+              })}
             </Box>
           )}
         </Paper>

@@ -28,15 +28,37 @@ import {
   Logout as LogoutIcon,
   KeyboardArrowDown as ArrowDownIcon,
 } from '@mui/icons-material';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import ColorModeToggle from './ColorModeToggle.jsx';
+
+const PREFETCH_ROUTES = [
+  '/dashboard',
+  '/appointments',
+  '/appointments/book',
+  '/profile',
+  '/admin',
+  '/admin/users',
+  '/admin/providers',
+];
 
 export default function Navigation() {
   const { user, logout, isAdmin } = useAuth();
+  const router = useRouter();
   const [anchorEl, setAnchorEl] = useState(null);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
+  useEffect(() => {
+    PREFETCH_ROUTES.forEach((href) => router.prefetch(href));
+    if (isAdmin) {
+      router.prefetch('/admin/users');
+      router.prefetch('/admin/providers');
+    }
+  }, [router, isAdmin]);
+
   if (!user) return null;
+
+  const navLinkSx = { color: 'text.secondary' };
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -86,7 +108,7 @@ export default function Navigation() {
       })}
     >
       <Toolbar>
-        <Link href="/dashboard" style={{ textDecoration: 'none', color: 'inherit' }}>
+        <Link href="/dashboard" prefetch style={{ textDecoration: 'none', color: 'inherit' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
             <CalendarIcon sx={{ color: 'primary.main', mr: 1, fontSize: 28 }} />
             <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
@@ -101,8 +123,9 @@ export default function Navigation() {
           <Button
             component={Link}
             href="/dashboard"
+            prefetch
             startIcon={<DashboardIcon />}
-            sx={{ color: 'text.secondary' }}
+            sx={navLinkSx}
           >
             Dashboard
           </Button>
@@ -110,8 +133,9 @@ export default function Navigation() {
           <Button
             component={Link}
             href="/appointments"
+            prefetch
             startIcon={<EventIcon />}
-            sx={{ color: 'text.secondary' }}
+            sx={navLinkSx}
           >
             Appointments
           </Button>
@@ -121,15 +145,17 @@ export default function Navigation() {
               <Button
                 component={Link}
                 href="/admin/users"
+                prefetch
                 startIcon={<UsersIcon />}
-                sx={{ color: 'text.secondary' }}
+                sx={navLinkSx}
               >
                 Users
               </Button>
               <Button
                 component={Link}
                 href="/admin/providers"
-                sx={{ color: 'text.secondary' }}
+                prefetch
+                sx={navLinkSx}
               >
                 Providers
               </Button>
@@ -170,6 +196,7 @@ export default function Navigation() {
             <MenuItem
               component={Link}
               href="/profile"
+              prefetch
               onClick={handleMenuClose}
               startIcon={<SettingsIcon />}
             >

@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext.jsx';
-import { useRouter } from 'next/navigation';
-import Navigation from '../../components/Navigation.jsx';
+import { useRequireAuth } from '../../hooks/useRequireAuth.js';
+import AppPageShell from '../../components/AppPageShell.jsx';
+import PageSpinner from '../../components/PageSpinner.jsx';
 import DashboardCalendar from '../../components/DashboardCalendar.jsx';
 import { appointmentAPI } from '../../lib/api';
+import { collectAllPages } from '../../lib/pagination';
 import { formatDate, formatTime, isToday } from '../../lib/utils';
 import {
   Box,
@@ -41,18 +42,11 @@ import {
 import Link from 'next/link';
 
 export default function DashboardPage() {
-  const { user, loading, isAdmin } = useAuth();
-  const router = useRouter();
+  const { user, isAdmin, showAuthSpinner, ready } = useRequireAuth();
   const [appointments, setAppointments] = useState([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
   const [welcomeDialogOpen, setWelcomeDialogOpen] = useState(false);
   const [todayTab, setTodayTab] = useState(0);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
 
   useEffect(() => {
     if (user) {
@@ -70,18 +64,14 @@ export default function DashboardPage() {
 
   const fetchAppointments = async () => {
     try {
-      let response;
-      if (isAdmin) {
-        // Admin sees all appointments
-        response = await appointmentAPI.getAllAppointments();
-      } else {
-        // Regular users see only their own appointments
-        response = await appointmentAPI.getUserAppointments(user.email);
-      }
-      
-      if (response.success && response.data) {
-        setAppointments(response.data);
-      }
+      const items = isAdmin
+        ? await collectAllPages((page) =>
+            appointmentAPI.getAllAppointments({ page, size: 50 })
+          )
+        : await collectAllPages((page) =>
+            appointmentAPI.getUserAppointments(user.email, { page, size: 50 })
+          );
+      setAppointments(items);
     } catch (error) {
       console.error('Error fetching appointments:', error);
     } finally {
@@ -100,25 +90,8 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: 'background.default',
-        }}
-      >
-        <CircularProgress size={60} />
-      </Box>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
+  if (showAuthSpinner) return <PageSpinner />;
+  if (!ready) return null;
 
   // Filter appointments for current day only
   const todayAppointments = appointments.filter(apt => {
@@ -321,25 +294,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      {/* Soft illustration-style background to match landing/auth pages */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl dark:bg-sky-900/40" />
-        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl dark:bg-indigo-900/30" />
-        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl dark:bg-blue-900/25" />
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" />
-      </div>
-
-      <Box
-        sx={{
-          minHeight: '100vh',
-          backgroundColor: 'transparent',
-          position: 'relative',
-          zIndex: 10,
-        }}
-      >
-        <Navigation />
-      
+    <AppPageShell>
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Box sx={{ mb: 4 }}>
           <Typography variant="h3" component="h1" gutterBottom>
@@ -430,6 +385,7 @@ export default function DashboardPage() {
           <Button
             component={Link}
             href="/appointments/book"
+            prefetch
             variant="contained"
             size="large"
             startIcon={<PlusIcon />}
@@ -440,6 +396,7 @@ export default function DashboardPage() {
           <Button
             component={Link}
             href="/appointments"
+            prefetch
             variant="outlined"
             size="large"
             startIcon={<EventIcon />}
@@ -893,7 +850,6 @@ export default function DashboardPage() {
           </Button>
         </DialogActions>
       </Dialog>
-      </Box>
-    </div>
+    </AppPageShell>
   );
 }

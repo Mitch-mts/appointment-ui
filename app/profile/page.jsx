@@ -2,15 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useRouter } from 'next/navigation';
-import Navigation from '../../components/Navigation.jsx';
+import { useAuth } from '../../contexts/AuthContext.jsx';
+import { useRequireAuth } from '../../hooks/useRequireAuth.js';
+import AppPageShell from '../../components/AppPageShell.jsx';
+import PageSpinner from '../../components/PageSpinner.jsx';
 import { userAPI } from '../../lib/api';
 import { User as UserIcon, Mail, Shield, Lock } from 'lucide-react';
 
 export default function ProfilePage() {
-  const { user, loading, updateUser } = useAuth();
   const router = useRouter();
+  const { updateUser } = useAuth();
+  const { user, showAuthSpinner, ready } = useRequireAuth();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -41,12 +44,6 @@ export default function ProfilePage() {
     reset: resetPassword,
     watch,
   } = useForm();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
 
   useEffect(() => {
     if (user) {
@@ -83,14 +80,6 @@ export default function ProfilePage() {
       setSaving(false);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-sky-600 dark:border-cyan-400" />
-      </div>
-    );
-  }
 
   const handleChangePassword = async (data) => {
     setPasswordError('');
@@ -142,23 +131,12 @@ export default function ProfilePage() {
     }
   };
 
-  if (!user) {
-    return null;
-  }
+  if (showAuthSpinner) return <PageSpinner />;
+  if (!ready) return null;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      {/* Soft illustration-style background to match landing/auth pages */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl dark:bg-sky-900/40" />
-        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl dark:bg-indigo-900/30" />
-        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl dark:bg-blue-900/25" />
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" />
-      </div>
-
-      <Navigation />
-      
-      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <AppPageShell>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Profile</h1>
           <p className="mt-2 text-gray-600 dark:text-slate-400">Manage your account information</p>
@@ -550,6 +528,6 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
-    </div>
+    </AppPageShell>
   );
 }

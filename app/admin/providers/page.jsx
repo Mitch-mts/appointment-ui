@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Alert,
   Box,
@@ -26,9 +25,10 @@ import {
   ChevronRight,
   DeleteOutline,
 } from '@mui/icons-material';
-import Navigation from '../../../components/Navigation.jsx';
 import ProviderAvailabilityPicker from '../../../components/ProviderAvailabilityPicker.jsx';
-import { useAuth } from '../../../contexts/AuthContext.jsx';
+import { useRequireAuth } from '../../../hooks/useRequireAuth.js';
+import AppPageShell from '../../../components/AppPageShell.jsx';
+import PageSpinner from '../../../components/PageSpinner.jsx';
 import {
   providerAPI,
   providerDisplayName,
@@ -55,8 +55,7 @@ export default function AdminProvidersPage() {
   const isXs = useMediaQuery(theme.breakpoints.down('sm'));
   const isMdDown = useMediaQuery(theme.breakpoints.down('md'));
   const slidePageSize = isXs ? 1 : isMdDown ? 2 : 3;
-  const { user, loading, isAdmin } = useAuth();
-  const router = useRouter();
+  const { user, isAdmin, showAuthSpinner, ready } = useRequireAuth({ adminOnly: true });
   const [providers, setProviders] = useState([]);
   const [listLoading, setListLoading] = useState(true);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -84,14 +83,6 @@ export default function AdminProvidersPage() {
       setListLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    } else if (!loading && !isAdmin) {
-      router.push('/dashboard');
-    }
-  }, [loading, user, isAdmin, router]);
 
   useEffect(() => {
     if (user && isAdmin) {
@@ -169,7 +160,7 @@ export default function AdminProvidersPage() {
   const handleOpenEdit = (provider) => {
     const str = (v) => (v == null ? '' : typeof v === 'string' ? v : String(v));
     setEditingProvider({
-      ...provider,
+      id: provider.id,
       title: str(provider.title),
       fullName: str(provider.fullName),
       service: str(provider.service),
@@ -184,7 +175,21 @@ export default function AdminProvidersPage() {
 
   const handleSaveEdit = async () => {
     if (!editingProvider) return;
-    const validationError = validate(editingProvider);
+
+    const id = editingProvider.id;
+    if (id == null || id === '') {
+      setError('Cannot update provider: missing id.');
+      return;
+    }
+
+    const payload = {
+      title: (editingProvider.title ?? '').trim(),
+      fullName: (editingProvider.fullName ?? '').trim(),
+      service: (editingProvider.service ?? '').trim(),
+      availability: (editingProvider.availability ?? '').trim(),
+    };
+
+    const validationError = validate(payload);
     if (validationError) {
       setError(validationError);
       return;
@@ -193,37 +198,24 @@ export default function AdminProvidersPage() {
     setSaving(true);
     setError('');
     try {
-      const id = editingProvider.id;
-      const payload = {
-        title: (editingProvider.title ?? '').trim(),
-        fullName: (editingProvider.fullName ?? '').trim(),
-        service: (editingProvider.service ?? '').trim(),
-        availability: (editingProvider.availability ?? '').trim(),
-      };
       const res = await providerAPI.updateProvider(id, payload);
       if (res?.success) {
-        if (res.data) {
-          setProviders((prev) =>
-            prev.map((p) =>
-              String(p.id) === String(id) ? res.data : p
-            )
-          );
-        } else {
-          setProviders((prev) =>
-            prev.map((p) =>
-              String(p.id) === String(id) ? { ...p, ...payload } : p
-            )
-          );
-        }
+        const updated = res.data ? { ...res.data } : { ...editingProvider, ...payload };
+        setProviders((prev) =>
+          prev.map((p) => (String(p.id) === String(id) ? updated : p))
+        );
         setEditingProvider(null);
       } else {
         setError(res?.message || 'Failed to update provider.');
       }
     } catch (err) {
-      setError(
+      const apiMessage =
         err.response?.data?.message ||
-          'Failed to update provider. Please try again.'
-      );
+        err.response?.data?.error ||
+        (Array.isArray(err.response?.data?.errors)
+          ? err.response.data.errors.map((e) => e.defaultMessage || e.message).join(', ')
+          : null);
+      setError(apiMessage || 'Failed to update provider. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -259,28 +251,12 @@ export default function AdminProvidersPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-sky-600 dark:border-cyan-400" />
-      </div>
-    );
-  }
-
-  if (!user || !isAdmin) return null;
+  if (showAuthSpinner) return <PageSpinner />;
+  if (!ready) return null;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl dark:bg-sky-900/40" />
-        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl dark:bg-indigo-900/30" />
-        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl dark:bg-blue-900/25" />
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" />
-      </div>
-
-      <Navigation />
-
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <AppPageShell>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="mb-8">
           <Typography variant="h4" sx={{ fontWeight: 800 }}>
             Manage Providers
@@ -822,11 +798,21 @@ export default function AdminProvidersPage() {
 
       <Dialog
         open={Boolean(editingProvider)}
-        onClose={() => !saving && setEditingProvider(null)}
+        onClose={() => {
+          if (!saving) {
+            setEditingProvider(null);
+            setError('');
+          }
+        }}
         PaperProps={{ sx: { borderRadius: 3, minWidth: { xs: '100%', sm: 520 } } }}
       >
         <DialogTitle>Edit provider</DialogTitle>
         <DialogContent>
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
           <Box sx={{ mt: 1, display: 'grid', gap: 2 }}>
             <TextField
               fullWidth
@@ -847,6 +833,7 @@ export default function AdminProvidersPage() {
               onChange={(e) => handleEditFieldChange('service', e.target.value)}
             />
             <ProviderAvailabilityPicker
+              key={editingProvider?.id ?? 'edit'}
               idPrefix="edit-provider"
               value={editingProvider?.availability || ''}
               onChange={(next) => handleEditFieldChange('availability', next)}
@@ -856,7 +843,10 @@ export default function AdminProvidersPage() {
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button
-            onClick={() => setEditingProvider(null)}
+            onClick={() => {
+              setEditingProvider(null);
+              setError('');
+            }}
             variant="outlined"
             disabled={saving}
           >
@@ -867,6 +857,6 @@ export default function AdminProvidersPage() {
           </Button>
         </DialogActions>
       </Dialog>
-    </div>
+    </AppPageShell>
   );
 }

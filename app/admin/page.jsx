@@ -1,24 +1,27 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext.jsx';
-import { useRouter } from 'next/navigation';
-import Navigation from '../../components/Navigation.jsx';
+import { useRequireAuth } from '../../hooks/useRequireAuth.js';
+import AppPageShell from '../../components/AppPageShell.jsx';
+import PageSpinner from '../../components/PageSpinner.jsx';
 import AppointmentCard from '../../components/AppointmentCard.jsx';
 import { appointmentAPI, userAPI } from '../../lib/api';
-import { formatDate, formatTime } from '../../lib/utils';
+import { getPageContent, getPageMeta } from '../../lib/pagination';
 import { Calendar, Users, Filter, TrendingUp, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function AdminPage() {
-  const { user, loading, isAdmin } = useAuth();
-  const router = useRouter();
+  const { user, isAdmin, showAuthSpinner, ready } = useRequireAuth({ adminOnly: true });
   const [appointments, setAppointments] = useState([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [filter, setFilter] = useState('all');
-  const [currentUsersPage, setCurrentUsersPage] = useState(1);
+  const [currentAppointmentsPage, setCurrentAppointmentsPage] = useState(0);
+  const [appointmentsMeta, setAppointmentsMeta] = useState(null);
+  const [currentUsersPage, setCurrentUsersPage] = useState(0);
+  const [usersMeta, setUsersMeta] = useState(null);
   const [usersPerPage] = useState(9); // 3x3 grid
+  const [appointmentsPerPage] = useState(20);
   const [stats, setStats] = useState({ 
     total: 0,
     scheduled: 0,
@@ -27,34 +30,67 @@ export default function AdminPage() {
   });
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    } else if (!loading && !isAdmin) {
-      router.push('/dashboard');
-    }
-  }, [user, loading, isAdmin, router]);
-
-  useEffect(() => {
     if (user && isAdmin) {
-      fetchAppointments();
-      fetchUsers();
+      fetchAppointmentStats();
     }
   }, [user, isAdmin]);
 
-  const fetchAppointments = async () => {
+  useEffect(() => {
+    if (user && isAdmin) {
+      fetchAppointments(currentAppointmentsPage);
+    }
+  }, [user, isAdmin, filter, currentAppointmentsPage]);
+
+  useEffect(() => {
+    if (user && isAdmin) {
+      fetchUsers(currentUsersPage);
+    }
+  }, [user, isAdmin, currentUsersPage]);
+
+  const bookingStatusForFilter = (activeFilter) => {
+    switch (activeFilter) {
+      case 'scheduled':
+        return 'PENDING';
+      case 'completed':
+        return 'COMPLETED';
+      case 'cancelled':
+        return 'CANCELLED';
+      default:
+        return undefined;
+    }
+  };
+
+  const fetchAppointmentStats = async () => {
     try {
-      const response = await appointmentAPI.getAppointments();
-      if (response.success && response.data) {
-        setAppointments(response.data);
-        
-        // Calculate stats
-        const stats = {
-          total: response.data.length,
-          scheduled: response.data.filter(apt => apt.status === 'SCHEDULED').length,
-          completed: response.data.filter(apt => apt.status === 'COMPLETED').length,
-          cancelled: response.data.filter(apt => apt.status === 'CANCELLED').length,
-        };
-        setStats(stats);
+      const [totalRes, pendingRes, completedRes, cancelledRes] = await Promise.all([
+        appointmentAPI.getAppointments({ page: 0, size: 1 }),
+        appointmentAPI.getAppointments({ page: 0, size: 1, bookingStatus: 'PENDING' }),
+        appointmentAPI.getAppointments({ page: 0, size: 1, bookingStatus: 'COMPLETED' }),
+        appointmentAPI.getAppointments({ page: 0, size: 1, bookingStatus: 'CANCELLED' }),
+      ]);
+
+      setStats({
+        total: getPageMeta(totalRes)?.totalElements ?? 0,
+        scheduled: getPageMeta(pendingRes)?.totalElements ?? 0,
+        completed: getPageMeta(completedRes)?.totalElements ?? 0,
+        cancelled: getPageMeta(cancelledRes)?.totalElements ?? 0,
+      });
+    } catch (error) {
+      console.error('Error fetching appointment stats:', error);
+    }
+  };
+
+  const fetchAppointments = async (page = 0) => {
+    try {
+      setLoadingAppointments(true);
+      const response = await appointmentAPI.getAppointments({
+        page,
+        size: appointmentsPerPage,
+        bookingStatus: bookingStatusForFilter(filter),
+      });
+      if (response.success) {
+        setAppointments(getPageContent(response));
+        setAppointmentsMeta(getPageMeta(response));
       }
     } catch (error) {
       console.error('Error fetching appointments:', error);
@@ -63,12 +99,13 @@ export default function AdminPage() {
     }
   };
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (page = 0) => {
     try {
-      const response = await userAPI.listUsers();
-      if (response.success && response.data) {
-        setUsers(response.data);
-        setCurrentUsersPage(1); // Reset to first page when users are fetched
+      setLoadingUsers(true);
+      const response = await userAPI.listUsers({ page, size: usersPerPage });
+      if (response.success) {
+        setUsers(getPageContent(response));
+        setUsersMeta(getPageMeta(response));
       }
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -81,31 +118,29 @@ export default function AdminPage() {
     try {
       const response = await appointmentAPI.cancelAppointment(id);
       if (response.success) {
-        fetchAppointments();
+        fetchAppointments(currentAppointmentsPage);
+        fetchAppointmentStats();
       }
     } catch (error) {
       console.error('Error canceling appointment:', error);
     }
   };
 
-  const filteredAppointments = appointments.filter((appointment) => {
-    switch (filter) {
-      case 'scheduled':
-        return appointment.status === 'SCHEDULED';
-      case 'completed':
-        return appointment.status === 'COMPLETED';
-      case 'cancelled':
-        return appointment.status === 'CANCELLED';
-      default:
-        return true;
-    }
-  });
+  const filteredAppointments = appointments;
 
-  // Pagination for users
-  const indexOfLastUser = currentUsersPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
-  const totalUsersPages = Math.ceil(users.length / usersPerPage);
+  const totalAppointmentsPages = appointmentsMeta?.totalPages ?? 1;
+
+  const handleFilterChange = (nextFilter) => {
+    setFilter(nextFilter);
+    setCurrentAppointmentsPage(0);
+  };
+
+  const handleAppointmentsPageChange = (page) => {
+    setCurrentAppointmentsPage(page);
+  };
+
+  const currentUsers = users;
+  const totalUsersPages = usersMeta?.totalPages ?? 1;
 
   const handleUsersPageChange = (page) => {
     setCurrentUsersPage(page);
@@ -113,31 +148,12 @@ export default function AdminPage() {
     document.getElementById('users')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-sky-600 dark:border-cyan-400" />
-      </div>
-    );
-  }
-
-  if (!user || !isAdmin) {
-    return null;
-  }
+  if (showAuthSpinner) return <PageSpinner />;
+  if (!ready) return null;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      {/* Soft illustration-style background to match landing/auth pages */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl dark:bg-sky-900/40" />
-        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl dark:bg-indigo-900/30" />
-        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl dark:bg-blue-900/25" />
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" />
-      </div>
-
-      <Navigation />
-      
-      <div className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <AppPageShell>
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Admin Panel</h1>
           <p className="mt-2 text-gray-600 dark:text-slate-400">Manage all appointments and system settings</p>
@@ -193,6 +209,80 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
+
+        {/* Appointments */}
+        <div className="mb-8">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-slate-100">Appointments</h2>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {['all', 'scheduled', 'completed', 'cancelled'].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => handleFilterChange(value)}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
+                    filter === value
+                      ? 'bg-primary-600 text-white'
+                      : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200'
+                  }`}
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {loadingAppointments ? (
+            <div className="py-12 text-center">
+              <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary-600 dark:border-primary-400" />
+            </div>
+          ) : filteredAppointments.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {filteredAppointments.map((appointment) => (
+                  <AppointmentCard
+                    key={appointment.id}
+                    appointment={appointment}
+                    onCancel={handleCancelAppointment}
+                    showActions
+                  />
+                ))}
+              </div>
+              {totalAppointmentsPages > 1 && (
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleAppointmentsPageChange(currentAppointmentsPage - 1)}
+                    disabled={currentAppointmentsPage === 0}
+                    className="flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </button>
+                  <span className="text-sm text-gray-600 dark:text-slate-400">
+                    Page {currentAppointmentsPage + 1} of {totalAppointmentsPages}
+                    {appointmentsMeta?.totalElements != null &&
+                      ` (${appointmentsMeta.totalElements} total)`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleAppointmentsPageChange(currentAppointmentsPage + 1)}
+                    disabled={currentAppointmentsPage >= totalAppointmentsPages - 1}
+                    className="flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="py-8 text-center text-gray-500 dark:text-slate-400">No appointments found.</p>
+          )}
+        </div>
         
         {/* Users List (Admin only) */}
         <div id="users" className="mt-12">
@@ -201,9 +291,11 @@ export default function AdminPage() {
               <Users className="h-6 w-6 text-primary-600 dark:text-primary-400" />
               <h2 className="text-2xl font-semibold text-gray-900 dark:text-slate-100">Registered Users</h2>
             </div>
-            {!loadingUsers && users.length > 0 && (
+            {!loadingUsers && usersMeta && (
               <p className="text-sm text-gray-600 dark:text-slate-400">
-                Showing {indexOfFirstUser + 1}-{Math.min(indexOfLastUser, users.length)} of {users.length} users
+                Showing {currentUsersPage * usersPerPage + 1}-
+                {Math.min((currentUsersPage + 1) * usersPerPage, usersMeta.totalElements)} of{' '}
+                {usersMeta.totalElements} users
               </p>
             )}
           </div>
@@ -245,9 +337,9 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={() => handleUsersPageChange(currentUsersPage - 1)}
-                    disabled={currentUsersPage === 1}
+                    disabled={currentUsersPage === 0}
                     className={`flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                      currentUsersPage === 1
+                      currentUsersPage === 0
                         ? 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-slate-800 dark:text-slate-600'
                         : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
                     }`}
@@ -257,10 +349,11 @@ export default function AdminPage() {
                   </button>
 
                   <div className="flex flex-wrap items-center justify-center gap-1">
-                    {Array.from({ length: totalUsersPages }, (_, i) => i + 1).map((page) => {
+                    {Array.from({ length: totalUsersPages }, (_, i) => i).map((page) => {
+                      const displayPage = page + 1;
                       if (
-                        page === 1 ||
-                        page === totalUsersPages ||
+                        page === 0 ||
+                        page === totalUsersPages - 1 ||
                         (page >= currentUsersPage - 1 && page <= currentUsersPage + 1)
                       ) {
                         return (
@@ -274,7 +367,7 @@ export default function AdminPage() {
                                 : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
                             }`}
                           >
-                            {page}
+                            {displayPage}
                           </button>
                         );
                       } else if (
@@ -294,9 +387,9 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={() => handleUsersPageChange(currentUsersPage + 1)}
-                    disabled={currentUsersPage === totalUsersPages}
+                    disabled={currentUsersPage >= totalUsersPages - 1}
                     className={`flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                      currentUsersPage === totalUsersPages
+                      currentUsersPage >= totalUsersPages - 1
                         ? 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-slate-800 dark:text-slate-600'
                         : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
                     }`}
@@ -320,6 +413,6 @@ export default function AdminPage() {
           )}
         </div>
       </div>
-    </div>
+    </AppPageShell>
   );
 }

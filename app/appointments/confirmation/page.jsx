@@ -1,18 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { parseISO, format } from 'date-fns';
 import { Button, CircularProgress } from '@mui/material';
-import Navigation from '../../../components/Navigation.jsx';
-import { useAuth } from '../../../contexts/AuthContext.jsx';
+import { useRequireAuth } from '../../../hooks/useRequireAuth.js';
+import PageSpinner from '../../../components/PageSpinner.jsx';
 import {
   providerAPI,
   providerDisplayName,
 } from '../../../lib/providers.js';
 
-export default function AppointmentConfirmationPage() {
-  const { user, loading, isAdmin } = useAuth();
+function AppointmentConfirmationContent() {
+  const { isAdmin, showAuthSpinner, ready } = useRequireAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -23,12 +23,6 @@ export default function AppointmentConfirmationPage() {
 
   const [provider, setProvider] = useState(null);
   const [providerLoading, setProviderLoading] = useState(Boolean(providerId));
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [loading, user, router]);
 
   useEffect(() => {
     if (!providerId) {
@@ -59,15 +53,8 @@ export default function AppointmentConfirmationPage() {
     };
   }, [providerId]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-sky-600 dark:border-cyan-400" />
-      </div>
-    );
-  }
-
-  if (!user) return null;
+  if (showAuthSpinner) return <PageSpinner />;
+  if (!ready) return null;
 
   let formattedDate = bookedDate || '';
   if (bookedDate) {
@@ -79,17 +66,7 @@ export default function AppointmentConfirmationPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl dark:bg-sky-900/40" />
-        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl dark:bg-indigo-900/30" />
-        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl dark:bg-blue-900/25" />
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" />
-      </div>
-
-      <Navigation />
-
-      <main className="relative z-10 mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+    <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="rounded-3xl border border-slate-200 bg-white/80 p-8 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-900/90">
           <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Appointment confirmed</h1>
           <p className="mt-2 text-slate-600 dark:text-slate-400">
@@ -153,13 +130,20 @@ export default function AppointmentConfirmationPage() {
               variant="outlined"
               size="large"
               sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
-              onClick={() => router.push('/providers')}
+              onClick={() => router.push('/appointments/book')}
             >
               Book another appointment
             </Button>
           </div>
         </div>
-      </main>
-    </div>
+    </main>
+  );
+}
+
+export default function AppointmentConfirmationPage() {
+  return (
+    <Suspense fallback={<PageSpinner />}>
+      <AppointmentConfirmationContent />
+    </Suspense>
   );
 }

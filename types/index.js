@@ -1,32 +1,31 @@
-// Constants for appointment status
+// Unified appointment status (align with Java backend)
 export const APPOINTMENT_STATUS = {
+  PENDING: 'PENDING',
   SCHEDULED: 'SCHEDULED',
+  COMPLETED: 'COMPLETED',
   CANCELLED: 'CANCELLED',
-  COMPLETED: 'COMPLETED'
 };
 
-// Constants for user roles
+export const APPOINTMENT_STATUS_LABELS = {
+  PENDING: 'Pending',
+  SCHEDULED: 'Scheduled',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+};
+
 export const USER_ROLES = {
   USER: 'USER',
-  ADMIN: 'ADMIN'
+  ADMIN: 'ADMIN',
 };
 
-// Helper function to validate appointment status
-export const isValidAppointmentStatus = (status) => {
-  return Object.values(APPOINTMENT_STATUS).includes(status);
-};
+export const isValidAppointmentStatus = (status) =>
+  Object.values(APPOINTMENT_STATUS).includes(status);
 
-// Helper function to validate user role
-export const isValidUserRole = (role) => {
-  return Object.values(USER_ROLES).includes(role);
-};
+export const isValidUserRole = (role) => Object.values(USER_ROLES).includes(role);
 
-// Helper function to create API response
-export const createApiResponse = (success, data = null, message = '', error = '') => {
-  return {
-    success,
-    data,
-    message,
-    error
-  };
-};
+export const createApiResponse = (success, data = null, message = '', error = '') => ({
+  success,
+  data,
+  message,
+  error,
+});

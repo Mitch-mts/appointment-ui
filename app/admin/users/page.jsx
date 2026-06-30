@@ -1,36 +1,32 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Users } from 'lucide-react';
-import Navigation from '../../../components/Navigation.jsx';
-import { useAuth } from '../../../contexts/AuthContext.jsx';
+import { useRequireAuth } from '../../../hooks/useRequireAuth.js';
+import AppPageShell from '../../../components/AppPageShell.jsx';
+import PageSpinner from '../../../components/PageSpinner.jsx';
 import { userAPI } from '../../../lib/api';
+import { getPageContent, getPageMeta } from '../../../lib/pagination';
 
 export default function AdminUsersPage() {
-  const { user, loading, isAdmin } = useAuth();
-  const router = useRouter();
+  const { user, isAdmin, showAuthSpinner, ready } = useRequireAuth({ adminOnly: true });
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
-  const [currentUsersPage, setCurrentUsersPage] = useState(1);
+  const [currentUsersPage, setCurrentUsersPage] = useState(0);
+  const [usersMeta, setUsersMeta] = useState(null);
   const [usersPerPage] = useState(9);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    } else if (!loading && !isAdmin) {
-      router.push('/dashboard');
-    }
-  }, [user, loading, isAdmin, router]);
 
   useEffect(() => {
     if (!user || !isAdmin) return;
     const fetchUsers = async () => {
       try {
-        const response = await userAPI.listUsers();
-        if (response.success && response.data) {
-          setUsers(response.data);
-          setCurrentUsersPage(1);
+        const response = await userAPI.listUsers({
+          page: currentUsersPage,
+          size: usersPerPage,
+        });
+        if (response.success) {
+          setUsers(getPageContent(response));
+          setUsersMeta(getPageMeta(response));
         }
       } catch (error) {
         console.error('Error fetching users:', error);
@@ -40,39 +36,21 @@ export default function AdminUsersPage() {
     };
 
     fetchUsers();
-  }, [user, isAdmin]);
+  }, [user, isAdmin, currentUsersPage]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-sky-600 dark:border-cyan-400" />
-      </div>
-    );
-  }
+  if (showAuthSpinner) return <PageSpinner />;
+  if (!ready) return null;
 
-  if (!user || !isAdmin) return null;
-
-  const indexOfLastUser = currentUsersPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
-  const totalUsersPages = Math.ceil(users.length / usersPerPage);
+  const currentUsers = users;
+  const totalUsersPages = usersMeta?.totalPages ?? 1;
 
   const handleUsersPageChange = (page) => {
     setCurrentUsersPage(page);
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl dark:bg-sky-900/40" />
-        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl dark:bg-indigo-900/30" />
-        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl dark:bg-blue-900/25" />
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" />
-      </div>
-
-      <Navigation />
-
-      <div className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <AppPageShell>
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Users</h1>
           <p className="mt-2 text-gray-600 dark:text-slate-400">Registered users in the system</p>
@@ -84,9 +62,11 @@ export default function AdminUsersPage() {
               <Users className="h-6 w-6 text-primary-600 dark:text-primary-400" />
               <h2 className="text-2xl font-semibold text-gray-900 dark:text-slate-100">Registered Users</h2>
             </div>
-            {!loadingUsers && users.length > 0 && (
+            {!loadingUsers && usersMeta && (
               <p className="text-sm text-gray-600 dark:text-slate-400">
-                Showing {indexOfFirstUser + 1}-{Math.min(indexOfLastUser, users.length)} of {users.length} users
+                Showing {currentUsersPage * usersPerPage + 1}-
+                {Math.min((currentUsersPage + 1) * usersPerPage, usersMeta.totalElements)} of{' '}
+                {usersMeta.totalElements} users
               </p>
             )}
           </div>
@@ -127,9 +107,9 @@ export default function AdminUsersPage() {
                   <button
                     type="button"
                     onClick={() => handleUsersPageChange(currentUsersPage - 1)}
-                    disabled={currentUsersPage === 1}
+                    disabled={currentUsersPage === 0}
                     className={`flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                      currentUsersPage === 1
+                      currentUsersPage === 0
                         ? 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-slate-800 dark:text-slate-600'
                         : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
                     }`}
@@ -139,7 +119,7 @@ export default function AdminUsersPage() {
                   </button>
 
                   <div className="flex flex-wrap items-center justify-center gap-1">
-                    {Array.from({ length: totalUsersPages }, (_, i) => i + 1).map((page) => (
+                    {Array.from({ length: totalUsersPages }, (_, i) => i).map((page) => (
                       <button
                         key={page}
                         type="button"
@@ -150,7 +130,7 @@ export default function AdminUsersPage() {
                             : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
                         }`}
                       >
-                        {page}
+                        {page + 1}
                       </button>
                     ))}
                   </div>
@@ -158,9 +138,9 @@ export default function AdminUsersPage() {
                   <button
                     type="button"
                     onClick={() => handleUsersPageChange(currentUsersPage + 1)}
-                    disabled={currentUsersPage === totalUsersPages}
+                    disabled={currentUsersPage >= totalUsersPages - 1}
                     className={`flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                      currentUsersPage === totalUsersPages
+                      currentUsersPage >= totalUsersPages - 1
                         ? 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-slate-800 dark:text-slate-600'
                         : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
                     }`}
@@ -189,7 +169,7 @@ export default function AdminUsersPage() {
           )}
         </div>
       </div>
-    </div>
+    </AppPageShell>
   );
 }
 

@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../../../contexts/AuthContext.jsx';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Navigation from '../../../components/Navigation.jsx';
+import { useRequireAuth } from '../../../hooks/useRequireAuth.js';
+import { hasCachedSession } from '../../../lib/sessionUser.js';
 import AppointmentCalendar from '../../../components/Calendar';
 import { appointmentAPI } from '../../../lib/api';
 import {
@@ -32,7 +33,10 @@ import {
   FormControl,
   InputLabel,
   MenuItem,
-  Select
+  Select,
+  Stepper,
+  Step,
+  StepLabel,
 } from '@mui/material';
 import { 
   CalendarToday, 
@@ -40,12 +44,13 @@ import {
   Message, 
   ArrowBack} from '@mui/icons-material';
 import Link from 'next/link';
-import React from 'react';
 
-export default function BookAppointmentPage() {
-  const { user, loading, isAdmin } = useAuth();
+function BookAppointmentPageContent() {
+  const { user, isAdmin } = useAuth();
+  const { showAuthSpinner, ready } = useRequireAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const providerInitDone = useRef(false);
   const [providers, setProviders] = useState([]);
   const [providersLoading, setProvidersLoading] = useState(true);
   const [selectedProviderId, setSelectedProviderId] = useState('');
@@ -56,6 +61,11 @@ export default function BookAppointmentPage() {
   const [error, setError] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmData, setConfirmData] = useState(null);
+  const [activeStep, setActiveStep] = useState(0);
+
+  const bookingSteps = isAdmin
+    ? ['Provider', 'Date & time', 'Client details', 'Confirm']
+    : ['Provider', 'Date & time', 'Your details', 'Confirm'];
 
   const {
     register,
@@ -64,21 +74,17 @@ export default function BookAppointmentPage() {
     formState: { errors },
   } = useForm();
 
-  // Auto-complete user details for non-admin users
-  React.useEffect(() => {
+  useEffect(() => {
     if (user && !isAdmin) {
-      console.log('🔍 User object for auto-completion:', user);
-      console.log('🔍 Available user fields:', Object.keys(user));
-      
-      // Try different possible field names for the user's name
-      const userName = user.name || user.fullName || user.firstName || user.displayName || user.email?.split('@')[0] || '';
-      const userEmail = user.email || '';
-      
-      console.log('🔍 Mapped userName:', userName);
-      console.log('🔍 Mapped userEmail:', userEmail);
-      
+      const userName =
+        user.fullName ||
+        user.name ||
+        user.firstName ||
+        user.displayName ||
+        user.email?.split('@')[0] ||
+        '';
       setValue('fullName', userName);
-      setValue('email', userEmail);
+      setValue('email', user.email || '');
     }
   }, [user, isAdmin, setValue]);
 
@@ -106,17 +112,35 @@ export default function BookAppointmentPage() {
 
   useEffect(() => {
     if (providers.length === 0) return;
-    const queryProviderId = searchParams?.get('providerId');
-    const hasQueryProvider = providers.some(
-      (p) => String(p.id) === String(queryProviderId)
-    );
-    const nextId = hasQueryProvider
-      ? String(queryProviderId)
-      : String(providers[0].id);
-    setSelectedProviderId(nextId);
+
+    const queryProviderId = searchParams.get('providerId');
+    const fromQuery = providers.find((p) => String(p.id) === String(queryProviderId));
+    const preferredId = fromQuery ? String(fromQuery.id) : String(providers[0].id);
+
+    setSelectedProviderId((current) => {
+      if (!providerInitDone.current) {
+        providerInitDone.current = true;
+        return preferredId;
+      }
+      if (fromQuery && current !== preferredId) return preferredId;
+      if (current && providers.some((p) => String(p.id) === current)) return current;
+      return preferredId;
+    });
   }, [providers, searchParams]);
 
-  const selectedProvider = getProviderFromList(providers, selectedProviderId);
+  const selectedProvider = useMemo(
+    () => getProviderFromList(providers, selectedProviderId),
+    [providers, selectedProviderId]
+  );
+
+  const handleProviderChange = (id) => {
+    const next = String(id);
+    if (next === selectedProviderId) return;
+    setSelectedProviderId(next);
+    setSelectedDate(null);
+    setSelectedTime('');
+    setActiveStep(0);
+  };
 
   const handleDateSelect = (date) => {
     setSelectedDate(date);
@@ -170,25 +194,13 @@ export default function BookAppointmentPage() {
     let didSucceed = false;
 
     try {
-      const providerNotes = isAdmin
-        ? [
-            `Provider: ${providerDisplayName(selectedProvider)}`,
-            `Service: ${selectedProvider.service}`,
-            `Availability: ${selectedProvider.availability || '—'}`,
-          ].join('\n')
-        : `Provider: ${providerDisplayName(selectedProvider)}`;
-
-      const notesParts = [providerNotes];
-      if (confirmData.notes) {
-        notesParts.push(`Additional notes: ${confirmData.notes}`);
-      }
-
       const appointmentData = {
         date: format(selectedDate, 'yyyy-MM-dd'),
         time: selectedTime,
         fullName: confirmData.fullName,
         email: confirmData.email,
-        notes: notesParts.join('\n\n'),
+        providerId: Number(selectedProviderId) || selectedProviderId,
+        notes: confirmData.notes?.trim() || undefined,
       };
 
       const response = await appointmentAPI.createAppointment(appointmentData);
@@ -204,8 +216,10 @@ export default function BookAppointmentPage() {
 
         router.push(
           `/appointments/confirmation?referenceNumber=${encodeURIComponent(
-            referenceNumber || '—'
-          )}&providerId=${encodeURIComponent(selectedProviderId)}&date=${encodeURIComponent(
+            referenceNumber || ''
+          )}&providerId=${encodeURIComponent(selectedProviderId)}&appointmentId=${encodeURIComponent(
+            created.id || ''
+          )}&date=${encodeURIComponent(
             format(selectedDate, 'yyyy-MM-dd')
           )}&time=${encodeURIComponent(selectedTime)}`
         );
@@ -222,34 +236,19 @@ export default function BookAppointmentPage() {
     }
   };
 
-  if (loading) {
+  if (showAuthSpinner && !hasCachedSession()) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-sky-600 dark:border-cyan-400" />
-      </div>
+      <Container maxWidth="xl" sx={{ py: 8, display: 'flex', justifyContent: 'center' }}>
+        <CircularProgress />
+      </Container>
     );
   }
-
-  if (!user) {
-    router.push('/login');
-    return null;
-  }
+  if (!ready) return null;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-sky-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      {/* Soft illustration-style background to match landing/auth pages */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl dark:bg-sky-900/40" />
-        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl dark:bg-indigo-900/30" />
-        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl dark:bg-blue-900/25" />
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" />
-      </div>
-
-      <Navigation />
-      
-      <Container maxWidth="xl" sx={{ py: 4, px: 2, position: 'relative', zIndex: 10 }}>
+    <Container maxWidth="xl" sx={{ py: 4, px: 2 }}>
         <Box sx={{ mb: 4 }}>
-          <Link href="/appointments" style={{ textDecoration: 'none' }}>
+          <Link href="/appointments" prefetch style={{ textDecoration: 'none' }}>
             <Button
               startIcon={<ArrowBack />}
               sx={{ mb: 2, color: 'primary.main' }}
@@ -267,82 +266,31 @@ export default function BookAppointmentPage() {
           </Typography>
         </Box>
 
-        {/* How to Book Instructions - Compact Design */}
-        <Paper 
-          elevation={1} 
-          sx={{ 
-            p: 3, 
-            mb: 3, 
-            borderRadius: 2,
-            bgcolor: 'primary.50',
-            border: '1px solid',
-            borderColor: 'primary.100'
-          }}
-        >
-          <Typography 
-            variant="h6" 
-            sx={{ 
-              fontWeight: 600, 
-              color: 'primary.main',
-              mb: 2,
-              display: 'flex',
-              alignItems: 'center'
-            }}
-          >
-            <CalendarToday sx={{ mr: 1, fontSize: 20 }} />
-            {isAdmin ? 'How to Book for Client' : 'How to Book'}
-          </Typography>
-          
-          <Box component="ul" sx={{ pl: 0, m: 0, listStyle: 'none' }}>
-            {(isAdmin ? [
-              'Select a provider',
-              'Select an available date from the calendar',
-              'Choose an available time slot',
-              'Enter the client\'s full name and email address',
-              'Add any optional notes or special requirements',
-              'Review and confirm your appointment'
-            ] : [
-              'Select a provider',
-              'Select an available date from the calendar',
-              'Choose an available time slot',
-              'Review your automatically filled information',
-              'Add any optional notes or special requirements',
-              'Review and confirm your appointment'
-            ]).map((step, index) => (
-              <Box
-                key={index}
-                component="li"
-                sx={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  mb: 1.5,
-                  '&:last-child': { mb: 0 }
-                }}
-              >
-                <Box sx={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  bgcolor: 'primary.main',
-                  mt: 1.5,
-                  mr: 2,
-                  flexShrink: 0
-                }} />
-                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
-                  {step}
-                </Typography>
-              </Box>
+        <Paper elevation={1} sx={{ p: 3, mb: 3, borderRadius: 3 }}>
+          <Stepper activeStep={activeStep} alternativeLabel>
+            {bookingSteps.map((label) => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
             ))}
-          </Box>
+          </Stepper>
         </Paper>
 
-        <Grid container spacing={6}>
+        <Grid container spacing={4}>
           {/* Calendar Section */}
           <Grid item xs={12} lg={5}>
             <AppointmentCalendar
+              providerId={selectedProviderId}
+              provider={selectedProvider}
               selectedDate={selectedDate}
-              onDateSelect={handleDateSelect}
-              onTimeSelect={handleTimeSelect}
+              onDateSelect={(d) => {
+                handleDateSelect(d);
+                if (selectedProviderId) setActiveStep(1);
+              }}
+              onTimeSelect={(t) => {
+                handleTimeSelect(t);
+                if (selectedProviderId && selectedDate) setActiveStep(2);
+              }}
               selectedTime={selectedTime}
               showTimeSlots={true}
             />
@@ -389,7 +337,7 @@ export default function BookAppointmentPage() {
                       labelId="provider-select-label"
                       value={selectedProviderId}
                       label="Choose provider"
-                      onChange={(e) => setSelectedProviderId(e.target.value)}
+                      onChange={(e) => handleProviderChange(e.target.value)}
                     >
                       {providers.map((p) => (
                         <MenuItem key={p.id} value={String(p.id)}>
@@ -756,6 +704,19 @@ export default function BookAppointmentPage() {
           </Grid>
         </Grid>
       </Container>
-    </div>
+  );
+}
+
+export default function BookAppointmentPage() {
+  return (
+    <Suspense
+      fallback={
+        <Container maxWidth="xl" sx={{ py: 8, display: 'flex', justifyContent: 'center' }}>
+          <CircularProgress />
+        </Container>
+      }
+    >
+      <BookAppointmentPageContent />
+    </Suspense>
   );
 }

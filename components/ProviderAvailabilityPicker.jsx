@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Box,
   FormControl,
@@ -25,88 +25,110 @@ function availabilityToString(value) {
   return String(value);
 }
 
+const DEFAULT_DAYS = { dayStart: 'Monday', dayEnd: 'Wednesday' };
+const DEFAULT_TIMES = { timeStart: '08:00', timeEnd: '11:00' };
+
+function defaultAvailabilityString() {
+  return formatDayRangeAvailability(
+    DEFAULT_DAYS.dayStart,
+    DEFAULT_DAYS.dayEnd,
+    DEFAULT_TIMES.timeStart,
+    DEFAULT_TIMES.timeEnd
+  );
+}
+
 export default function ProviderAvailabilityPicker({
   value,
   onChange,
   disabled = false,
   idPrefix = 'availability',
 }) {
-  const [dayStart, setDayStart] = useState('Monday');
-  const [dayEnd, setDayEnd] = useState('Wednesday');
-  const [timeStart, setTimeStart] = useState('08:00');
-  const [timeEnd, setTimeEnd] = useState('11:00');
-  const touchedRef = useRef(false);
+  const [dayStart, setDayStart] = useState(DEFAULT_DAYS.dayStart);
+  const [dayEnd, setDayEnd] = useState(DEFAULT_DAYS.dayEnd);
+  const [timeStart, setTimeStart] = useState(DEFAULT_TIMES.timeStart);
+  const [timeEnd, setTimeEnd] = useState(DEFAULT_TIMES.timeEnd);
   const onChangeRef = useRef(onChange);
+  const syncedValueRef = useRef(null);
+
   onChangeRef.current = onChange;
 
-  const combined = useMemo(() => {
-    if (!timeStart || !timeEnd) return '';
-    const [d0, d1] = normalizeDayRange(dayStart, dayEnd);
-    return formatDayRangeAvailability(d0, d1, timeStart, timeEnd);
-  }, [dayStart, dayEnd, timeStart, timeEnd]);
+  const emitAvailability = (dStart, dEnd, tStart, tEnd) => {
+    const [d0, d1] = normalizeDayRange(dStart, dEnd);
+    const next = formatDayRangeAvailability(d0, d1, tStart, tEnd);
+    syncedValueRef.current = next;
+    onChangeRef.current(next);
+    return next;
+  };
 
+  // Sync internal controls when the parent value changes (e.g. opening edit dialog).
   useEffect(() => {
     const v = availabilityToString(value).trim();
+
+    if (v === syncedValueRef.current) return;
+
     const parsed = parseDayRangeAvailability(v);
     if (parsed) {
       setDayStart(parsed.dayStart);
       setDayEnd(parsed.dayEnd);
       setTimeStart(parsed.timeStart);
       setTimeEnd(parsed.timeEnd);
-      touchedRef.current = false;
+      const normalized = formatDayRangeAvailability(
+        parsed.dayStart,
+        parsed.dayEnd,
+        parsed.timeStart,
+        parsed.timeEnd
+      );
+      syncedValueRef.current = normalized;
+      if (normalized !== v) {
+        onChangeRef.current(normalized);
+      }
       return;
     }
-    setDayStart('Monday');
-    setDayEnd('Wednesday');
-    setTimeStart('08:00');
-    setTimeEnd('11:00');
-    touchedRef.current = false;
+
     if (!v) {
-      const next = formatDayRangeAvailability(
-        'Monday',
-        'Wednesday',
-        '08:00',
-        '11:00'
-      );
-      queueMicrotask(() => onChangeRef.current(next));
+      setDayStart(DEFAULT_DAYS.dayStart);
+      setDayEnd(DEFAULT_DAYS.dayEnd);
+      setTimeStart(DEFAULT_TIMES.timeStart);
+      setTimeEnd(DEFAULT_TIMES.timeEnd);
+      const next = defaultAvailabilityString();
+      syncedValueRef.current = next;
+      onChangeRef.current(next);
+      return;
     }
+
+    // Legacy / free-text value: keep controls at defaults; parent keeps stored string until user edits.
+    setDayStart(DEFAULT_DAYS.dayStart);
+    setDayEnd(DEFAULT_DAYS.dayEnd);
+    setTimeStart(DEFAULT_TIMES.timeStart);
+    setTimeEnd(DEFAULT_TIMES.timeEnd);
+    syncedValueRef.current = v;
   }, [value]);
 
-  useEffect(() => {
-    if (!combined) return;
-    const v = availabilityToString(value).trim();
-    if (!v) return;
-    if (combined === v) return;
-    const isDay = parseDayRangeAvailability(v);
-    if (!isDay && !touchedRef.current) return;
-    if (parseIsoDateAvailability(v) && !touchedRef.current) return;
-    onChangeRef.current(combined);
-  }, [combined, value]);
-
-  const markTouched = () => {
-    touchedRef.current = true;
-  };
-
   const handleDayStart = (e) => {
-    markTouched();
-    setDayStart(e.target.value);
+    const nextDay = e.target.value;
+    setDayStart(nextDay);
+    emitAvailability(nextDay, dayEnd, timeStart, timeEnd);
   };
 
   const handleDayEnd = (e) => {
-    markTouched();
-    setDayEnd(e.target.value);
+    const nextDay = e.target.value;
+    setDayEnd(nextDay);
+    emitAvailability(dayStart, nextDay, timeStart, timeEnd);
   };
 
   const handleTimeStart = (e) => {
-    markTouched();
-    setTimeStart(e.target.value);
+    const nextTime = e.target.value;
+    setTimeStart(nextTime);
+    emitAvailability(dayStart, dayEnd, nextTime, timeEnd);
   };
 
   const handleTimeEnd = (e) => {
-    markTouched();
-    setTimeEnd(e.target.value);
+    const nextTime = e.target.value;
+    setTimeEnd(nextTime);
+    emitAvailability(dayStart, dayEnd, timeStart, nextTime);
   };
 
+  const combined = formatDayRangeAvailability(dayStart, dayEnd, timeStart, timeEnd);
   const vTrim = availabilityToString(value).trim();
   const legacyFreeText =
     Boolean(vTrim) &&
