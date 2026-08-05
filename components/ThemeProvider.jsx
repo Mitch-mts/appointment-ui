@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
-import { CssBaseline } from '@mui/material';
+import CssBaseline from '@mui/material/CssBaseline';
 import { createAppTheme } from '../lib/theme.js';
 import { useColorMode } from '../contexts/ColorModeContext.jsx';
 

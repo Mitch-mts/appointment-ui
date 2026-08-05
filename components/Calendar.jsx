@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import Calendar from 'react-calendar';
-import { format, isSameDay, isToday, isAfter, startOfDay } from 'date-fns';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { addDays, format, isSameDay, isAfter, startOfDay } from 'date-fns';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV2';
+import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
+import { PickersDay } from '@mui/x-date-pickers/PickersDay';
 import { appointmentAPI } from '../lib/api';
 import { isTimeSlotAvailable } from '../lib/utils';
 import {
@@ -18,13 +21,66 @@ import {
   Button,
   CircularProgress,
   Alert,
+  Stack,
+  Chip,
 } from '@mui/material';
-import { Schedule } from '@mui/icons-material';
-import 'react-calendar/dist/Calendar.css';
+import { Schedule, CalendarMonth } from '@mui/icons-material';
 
-function getEndOfCurrentYear() {
-  const y = new Date().getFullYear();
-  return new Date(y, 11, 31);
+/** Bookable window — shorter range keeps the wizard focused. */
+const BOOKING_WINDOW_DAYS = 90;
+
+function startOfToday() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function AvailableDay(props) {
+  const { day, outsideCurrentMonth, selected, isAvailable, ...other } = props;
+
+  return (
+    <PickersDay
+      {...other}
+      day={day}
+      outsideCurrentMonth={outsideCurrentMonth}
+      selected={selected}
+      sx={(theme) => {
+        if (selected) {
+          return {
+            bgcolor: `${theme.palette.primary.main} !important`,
+            color: `${theme.palette.primary.contrastText} !important`,
+            fontWeight: 700,
+            '&:hover': { bgcolor: `${theme.palette.primary.dark} !important` },
+          };
+        }
+        if (isAvailable) {
+          return {
+            bgcolor:
+              theme.palette.mode === 'dark'
+                ? 'rgba(46, 125, 50, 0.35)'
+                : 'rgba(232, 245, 233, 1)',
+            color:
+              theme.palette.mode === 'dark'
+                ? theme.palette.success.light
+                : theme.palette.success.dark,
+            fontWeight: 600,
+            border: `1px solid ${
+              theme.palette.mode === 'dark'
+                ? 'rgba(102, 187, 106, 0.45)'
+                : 'rgba(129, 199, 132, 0.9)'
+            }`,
+            '&:hover': {
+              bgcolor:
+                theme.palette.mode === 'dark'
+                  ? 'rgba(46, 125, 50, 0.55)'
+                  : 'rgba(200, 230, 201, 1)',
+            },
+          };
+        }
+        return {};
+      }}
+    />
+  );
 }
 
 export default function AppointmentCalendar({
@@ -39,216 +95,294 @@ export default function AppointmentCalendar({
 }) {
   const [availabilityCalendar, setAvailabilityCalendar] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState('');
   const loadedForProviderRef = useRef(null);
 
-  const maxDate = getEndOfCurrentYear();
+  const minDate = useMemo(() => startOfToday(), []);
+  const maxDate = useMemo(() => addDays(startOfToday(), BOOKING_WINDOW_DAYS), []);
+  const providerScheduleKey = useMemo(
+    () =>
+      provider
+        ? JSON.stringify({
+            id: provider.id,
+            schedule: provider.schedule ?? provider.workingHours ?? null,
+            availability: provider.availability ?? null,
+            slotDuration: provider.slotDuration ?? provider.appointmentDuration ?? null,
+          })
+        : '',
+    [provider]
+  );
 
   useEffect(() => {
     if (!providerId) {
       setAvailabilityCalendar([]);
-      setLoadError('');
       setLoading(false);
       loadedForProviderRef.current = null;
       return;
     }
 
     let cancelled = false;
-    const showLoadingSpinner = loadedForProviderRef.current !== providerId;
+    const startDate = format(minDate, 'yyyy-MM-dd');
+    const endDate = format(maxDate, 'yyyy-MM-dd');
 
-    const fetchAvailability = async () => {
-      if (showLoadingSpinner) setLoading(true);
-      setLoadError('');
-      const startDate = format(new Date(), 'yyyy-MM-dd');
-      const endDate = format(maxDate, 'yyyy-MM-dd');
+    // Instant schedule-based slots so the wizard never blocks on a missing API.
+    const clientCalendar = buildClientAvailabilityCalendar(
+      provider,
+      startDate,
+      endDate
+    );
+    setAvailabilityCalendar(clientCalendar);
 
-      const clientCalendar = buildClientAvailabilityCalendar(
-        provider,
-        startDate,
-        endDate
-      );
+    const shouldShowSpinner = loadedForProviderRef.current !== providerId;
+    if (shouldShowSpinner) setLoading(true);
 
+    (async () => {
       try {
         const response = await appointmentAPI.getAvailableDates(
           startDate,
           endDate,
           providerId
         );
-
         if (cancelled) return;
 
         if (response?.success && Array.isArray(response.data)) {
           setAvailabilityCalendar(
             mergeAvailabilityCalendars(response.data, clientCalendar)
           );
-        } else {
-          setAvailabilityCalendar(clientCalendar);
-          setLoadError(
-            'Showing times from provider schedule. Live availability will apply when the server is updated.'
-          );
         }
-        if (!cancelled) loadedForProviderRef.current = providerId;
+        // Soft-fail: keep provider schedule; never show a server-unreachable alert.
       } catch {
+        // Keep clientCalendar already set above.
+      } finally {
         if (!cancelled) {
-          setAvailabilityCalendar(clientCalendar);
-          setLoadError(
-            'Could not reach the server. Times are based on the provider schedule only.'
-          );
+          setLoading(false);
           loadedForProviderRef.current = providerId;
         }
-      } finally {
-        if (!cancelled) setLoading(false);
       }
-    };
-
-    fetchAvailability();
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [providerId, provider, maxDate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- provider via providerScheduleKey
+  }, [providerId, providerScheduleKey, maxDate, minDate]);
 
   const slotsForSelectedDate = useMemo(() => {
     if (!selectedDate) return [];
     return getSlotsForDate(availabilityCalendar, selectedDate);
   }, [availabilityCalendar, selectedDate]);
 
-  const isDateAvailable = (date) => {
-    if (isAfter(startOfDay(new Date()), startOfDay(date))) return false;
-    if (date.getFullYear() > new Date().getFullYear()) return false;
-    if (!providerId) return false;
-    return isDateBookable(availabilityCalendar, date);
-  };
+  const isDateAvailable = useCallback(
+    (date) => {
+      if (isAfter(startOfDay(new Date()), startOfDay(date))) return false;
+      if (isAfter(startOfDay(date), startOfDay(maxDate))) return false;
+      if (!providerId) return false;
+      if (disabledDates.some((d) => isSameDay(date, d))) return false;
+      return isDateBookable(availabilityCalendar, date);
+    },
+    [availabilityCalendar, disabledDates, maxDate, providerId]
+  );
 
-  const tileClassName = ({ date }) => {
-    const base = 'p-2 text-center rounded-md text-sm';
-
-    if (selectedDate && isSameDay(date, selectedDate)) {
-      return `${base} !bg-sky-600 !text-white`;
-    }
-
-    if (!providerId) {
-      return `${base} opacity-40 cursor-not-allowed`;
-    }
-
-    if (isDateAvailable(date)) {
-      return `${base} bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-200 cursor-pointer`;
-    }
-
-    if (disabledDates.some((d) => isSameDay(date, d))) {
-      return `${base} bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-slate-800`;
-    }
-
-    if (isAfter(startOfDay(new Date()), startOfDay(date))) {
-      return `${base} bg-slate-100 text-slate-400 cursor-not-allowed dark:bg-slate-800`;
-    }
-
-    return `${base} text-slate-400 cursor-not-allowed`;
-  };
-
-  const tileDisabled = ({ date }) =>
-    !providerId ||
-    !isDateAvailable(date) ||
-    disabledDates.some((d) => isSameDay(date, d)) ||
-    isAfter(startOfDay(new Date()), startOfDay(date));
-
-  const handleDateChange = (value) => {
-    if (value instanceof Date) onDateSelect(value);
-  };
+  const shouldDisableDate = useCallback(
+    (date) => !isDateAvailable(date),
+    [isDateAvailable]
+  );
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <Paper elevation={2} sx={{ p: 3, borderRadius: 3 }}>
-        <Typography variant="h6" gutterBottom fontWeight={700}>
-          Choose a date
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {providerId
-            ? 'Green dates have open times for your selected provider.'
-            : 'Select a provider first to see available dates.'}
-        </Typography>
-
-        {!providerId && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Pick a provider in the form to load the calendar.
-          </Alert>
-        )}
-
-        <Calendar
-          onChange={handleDateChange}
-          value={selectedDate}
-          tileClassName={tileClassName}
-          tileDisabled={tileDisabled}
-          minDate={new Date()}
-          maxDate={maxDate}
-          className="w-full border-0"
-          showNavigation
-          showNeighboringMonth={false}
-          locale="en-US"
-        />
-
-        {loadError && providerId && (
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            {loadError}
-          </Alert>
-        )}
-      </Paper>
-
-      {showTimeSlots && selectedDate && providerId && (
-        <Paper elevation={2} sx={{ p: 3, borderRadius: 3 }}>
-          <Typography
-            variant="h6"
-            gutterBottom
-            fontWeight={700}
-            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-          >
-            <Schedule color="primary" />
-            Times for {format(selectedDate, 'EEEE, MMM d')}
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <Paper
+          elevation={0}
+          sx={{
+            p: { xs: 2, sm: 3 },
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+          }}
+        >
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+            <CalendarMonth color="primary" />
+            <Typography variant="h6" fontWeight={700}>
+              Choose a date
+            </Typography>
+          </Stack>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {providerId
+              ? 'Green dates have open times. Your selection uses the app primary color.'
+              : 'Select a provider first to see available dates.'}
           </Typography>
 
-          {loading ? (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <CircularProgress size={36} />
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                Loading available times…
-              </Typography>
-            </Box>
-          ) : slotsForSelectedDate.length === 0 ? (
-            <Alert severity="info">
-              No open times on this day. Try another date.
+          {!providerId && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Pick a provider to load the calendar.
             </Alert>
-          ) : (
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
-                gap: 1.5,
+          )}
+
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              borderRadius: 2.5,
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: (theme) =>
+                theme.palette.mode === 'dark'
+                  ? 'rgba(15, 23, 42, 0.55)'
+                  : theme.palette.grey[50],
+              py: 1,
+              position: 'relative',
+              minHeight: 340,
+            }}
+          >
+            {loading && providerId && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: 'rgba(255,255,255,0.35)',
+                  zIndex: 1,
+                  borderRadius: 2.5,
+                }}
+              >
+                <CircularProgress size={32} />
+              </Box>
+            )}
+
+            <DateCalendar
+              value={selectedDate}
+              onChange={(value) => {
+                if (value instanceof Date) onDateSelect(value);
               }}
+              minDate={minDate}
+              maxDate={maxDate}
+              disabled={!providerId}
+              shouldDisableDate={shouldDisableDate}
+              slots={{ day: AvailableDay }}
+              slotProps={{
+                day: (ownerState) => ({
+                  isAvailable: isDateAvailable(ownerState.day),
+                }),
+              }}
+              sx={{
+                width: '100%',
+                maxWidth: 360,
+                '& .MuiPickersCalendarHeader-root': {
+                  px: 1.5,
+                  mt: 0.5,
+                },
+                '& .MuiPickersCalendarHeader-label': {
+                  fontWeight: 700,
+                },
+                '& .MuiDayCalendar-weekDayLabel': {
+                  fontWeight: 700,
+                  color: 'text.secondary',
+                },
+                '& .MuiPickersDay-root': {
+                  fontWeight: 600,
+                },
+              }}
+            />
+          </Box>
+
+          {providerId && (
+            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 2 }}>
+              <Chip
+                size="small"
+                label="Available"
+                sx={{
+                  bgcolor: (t) =>
+                    t.palette.mode === 'dark' ? 'success.dark' : 'success.light',
+                  color: 'success.contrastText',
+                }}
+              />
+              <Chip size="small" color="primary" label="Selected" />
+              <Chip size="small" variant="outlined" label="Unavailable" />
+            </Stack>
+          )}
+
+          {selectedDate && (
+            <Alert
+              severity="success"
+              icon={<CalendarMonth fontSize="inherit" />}
+              sx={{ mt: 2 }}
             >
-              {slotsForSelectedDate.map((slot) => {
-                const selected = selectedTime === slot.time;
-                const past = !isTimeSlotAvailable(slot.time, selectedDate);
-                return (
-                  <Button
-                    key={slot.time}
-                    onClick={() => onTimeSelect?.(slot.time)}
-                    disabled={past || !slot.available}
-                    variant={selected ? 'contained' : 'outlined'}
-                    size="medium"
-                    sx={{
-                      py: 1.25,
-                      fontWeight: selected ? 700 : 500,
-                      borderRadius: 2,
-                    }}
-                  >
-                    {slot.time}
-                  </Button>
-                );
-              })}
-            </Box>
+              Selected: <strong>{format(selectedDate, 'EEEE, MMMM d, yyyy')}</strong>
+            </Alert>
           )}
         </Paper>
-      )}
-    </Box>
+
+        {showTimeSlots && selectedDate && providerId && (
+          <Paper
+            elevation={0}
+            sx={{
+              p: { xs: 2, sm: 3 },
+              borderRadius: 3,
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+            }}
+          >
+            <Typography
+              variant="h6"
+              gutterBottom
+              fontWeight={700}
+              sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+            >
+              <Schedule color="primary" />
+              Times for {format(selectedDate, 'EEEE, MMM d')}
+            </Typography>
+
+            {slotsForSelectedDate.length === 0 ? (
+              <Alert severity="info">
+                No open times on this day. Try another date.
+              </Alert>
+            ) : (
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))',
+                  gap: 1.5,
+                  mt: 1,
+                }}
+              >
+                {slotsForSelectedDate.map((slot) => {
+                  const selected = selectedTime === slot.time;
+                  const past = !isTimeSlotAvailable(slot.time, selectedDate);
+                  return (
+                    <Button
+                      key={slot.time}
+                      onClick={() => onTimeSelect?.(slot.time)}
+                      disabled={past || !slot.available}
+                      variant={selected ? 'contained' : 'outlined'}
+                      size="medium"
+                      sx={{
+                        py: 1.25,
+                        fontWeight: selected ? 700 : 600,
+                        borderRadius: 2,
+                      }}
+                    >
+                      {slot.time}
+                    </Button>
+                  );
+                })}
+              </Box>
+            )}
+
+            {selectedTime && (
+              <Alert
+                severity="success"
+                icon={<Schedule fontSize="inherit" />}
+                sx={{ mt: 2 }}
+              >
+                Selected time: <strong>{selectedTime}</strong>
+              </Alert>
+            )}
+          </Paper>
+        )}
+      </Box>
+    </LocalizationProvider>
   );
 }

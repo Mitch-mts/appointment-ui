@@ -12,12 +12,18 @@ export default function HomePage() {
       <LandingRoutePrefetch />
       <LandingAuthRedirect />
 
-      {/* Soft illustration-style background */}
+      {/* Full-bleed entry wallpaper */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-24 -left-32 h-72 w-72 rounded-full bg-blue-100 blur-3xl dark:bg-sky-900/40" />
-        <div className="absolute top-32 -right-24 h-80 w-80 rounded-full bg-cyan-100 blur-3xl dark:bg-indigo-900/30" />
-        <div className="absolute bottom-[-80px] left-12 h-72 w-72 rounded-full bg-indigo-100 blur-3xl dark:bg-blue-900/25" />
-        <div className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" />
+        <Image
+          src="/background-wallpaper.jpeg"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-sky-50/70 dark:bg-slate-950/75" />
+        <div className="absolute inset-0 bg-gradient-to-br from-white/45 via-sky-50/35 to-blue-50/40 dark:from-slate-950/45 dark:via-slate-900/40 dark:to-slate-950/50" />
       </div>
 
       {/* Top navigation */}
@@ -59,9 +65,9 @@ export default function HomePage() {
               in just a few clicks.
             </h1>
             <p className="text-pretty text-sm leading-relaxed text-slate-600 dark:text-slate-300 sm:text-base">
-              Let your clients choose the time that works best for them. Real‑time
-              availability, instant confirmations and friendly reminders keep everyone on
-              track.
+              Pick a time that works for you. See real-time availability, get instant
+              confirmation, and receive friendly reminders so you never miss an
+              appointment.
             </p>
 
             <LandingHeroCTA />

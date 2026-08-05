@@ -1,0 +1,191 @@
+/* Themed react-calendar — matches sky/slate appointment booking UI */
+
+.ab-calendar.react-calendar {
+  width: 100%;
+  max-width: 100%;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  line-height: 1.25;
+}
+
+.ab-calendar .react-calendar__navigation {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+  height: auto;
+}
+
+.ab-calendar .react-calendar__navigation button {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border-radius: 0.75rem;
+  background: rgb(240 249 255); /* sky-50 */
+  color: rgb(3 105 161); /* sky-700 */
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.ab-calendar .react-calendar__navigation button:enabled:hover,
+.ab-calendar .react-calendar__navigation button:enabled:focus {
+  background: rgb(224 242 254); /* sky-100 */
+}
+
+.ab-calendar .react-calendar__navigation button:disabled {
+  background: rgb(241 245 249);
+  color: rgb(148 163 184);
+  opacity: 1;
+}
+
+.ab-calendar .react-calendar__navigation__label {
+  flex-grow: 1 !important;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: rgb(15 23 42);
+  pointer-events: none;
+}
+
+.ab-calendar .react-calendar__month-view__weekdays {
+  margin-bottom: 0.35rem;
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgb(100 116 139);
+}
+
+.ab-calendar .react-calendar__month-view__weekdays__weekday {
+  padding: 0.5rem 0;
+}
+
+.ab-calendar .react-calendar__month-view__weekdays__weekday abbr {
+  text-decoration: none;
+}
+
+.ab-calendar .react-calendar__tile {
+  max-width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.25rem;
+  margin: 0.1rem 0;
+  border-radius: 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: rgb(51 65 85);
+  background: transparent;
+}
+
+.ab-calendar .react-calendar__tile:enabled:hover,
+.ab-calendar .react-calendar__tile:enabled:focus {
+  background: rgb(224 242 254);
+  color: rgb(3 105 161);
+}
+
+.ab-calendar .react-calendar__tile:disabled {
+  background: transparent !important;
+  color: rgb(203 213 225) !important;
+  cursor: not-allowed;
+}
+
+.ab-calendar .react-calendar__tile--now {
+  box-shadow: inset 0 0 0 2px rgb(125 211 252);
+  background: rgb(240 249 255);
+  color: rgb(3 105 161);
+}
+
+.ab-calendar .react-calendar__tile--active,
+.ab-calendar .react-calendar__tile--active:enabled:hover,
+.ab-calendar .react-calendar__tile--active:enabled:focus {
+  background: rgb(2 132 199) !important; /* sky-600 */
+  color: #fff !important;
+  box-shadow: none;
+}
+
+.ab-calendar .ab-cal-available {
+  background: rgb(240 253 244) !important; /* emerald-50 */
+  color: rgb(6 95 70) !important;
+  box-shadow: inset 0 0 0 1px rgb(167 243 208);
+}
+
+.ab-calendar .ab-cal-available:enabled:hover {
+  background: rgb(209 250 229) !important;
+}
+
+.ab-calendar .ab-cal-selected {
+  background: rgb(2 132 199) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+.ab-calendar .ab-cal-muted {
+  color: rgb(203 213 225) !important;
+}
+
+/* Dark mode */
+html.dark .ab-calendar .react-calendar__navigation button {
+  background: rgb(15 23 42);
+  color: rgb(125 211 252);
+  border: 1px solid rgb(51 65 85);
+}
+
+html.dark .ab-calendar .react-calendar__navigation button:enabled:hover,
+html.dark .ab-calendar .react-calendar__navigation button:enabled:focus {
+  background: rgb(30 41 59);
+}
+
+html.dark .ab-calendar .react-calendar__navigation button:disabled {
+  background: rgb(15 23 42);
+  color: rgb(71 85 105);
+  border-color: rgb(30 41 59);
+}
+
+html.dark .ab-calendar .react-calendar__navigation__label {
+  color: rgb(241 245 249);
+}
+
+html.dark .ab-calendar .react-calendar__month-view__weekdays {
+  color: rgb(148 163 184);
+}
+
+html.dark .ab-calendar .react-calendar__tile {
+  color: rgb(226 232 240);
+}
+
+html.dark .ab-calendar .react-calendar__tile:enabled:hover,
+html.dark .ab-calendar .react-calendar__tile:enabled:focus {
+  background: rgb(30 41 59);
+  color: rgb(125 211 252);
+}
+
+html.dark .ab-calendar .react-calendar__tile:disabled {
+  color: rgb(71 85 105) !important;
+}
+
+html.dark .ab-calendar .react-calendar__tile--now {
+  box-shadow: inset 0 0 0 2px rgb(14 165 233);
+  background: rgb(15 23 42);
+  color: rgb(125 211 252);
+}
+
+html.dark .ab-calendar .ab-cal-available {
+  background: rgba(6, 78, 59, 0.45) !important;
+  color: rgb(167 243 208) !important;
+  box-shadow: inset 0 0 0 1px rgb(6 95 70);
+}
+
+html.dark .ab-calendar .ab-cal-available:enabled:hover {
+  background: rgba(6, 95, 70, 0.65) !important;
+}
+
+html.dark .ab-calendar .ab-cal-selected {
+  background: rgb(2 132 199) !important;
+  color: #fff !important;
+}
+
+html.dark .ab-calendar .ab-cal-muted {
+  color: rgb(71 85 105) !important;
+}
