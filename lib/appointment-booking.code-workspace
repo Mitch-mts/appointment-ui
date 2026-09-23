@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../daily_read_ui"
+		},
+		{
+			"path": "../../../BACKEND/JAVA/appointments"
+		}
+	],
+	"settings": {}
+}
