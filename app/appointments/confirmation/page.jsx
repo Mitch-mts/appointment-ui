@@ -66,9 +66,9 @@ function AppointmentConfirmationContent() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="rounded-3xl border border-slate-200 bg-white/80 p-8 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-900/90">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Appointment confirmed</h1>
+      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+        <div className="rounded-3xl border border-slate-200 bg-white/80 p-5 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-900/90 sm:p-8">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 sm:text-3xl">Appointment confirmed</h1>
           <p className="mt-2 text-slate-600 dark:text-slate-400">
             You’re all set. Below is your booking summary.
           </p>

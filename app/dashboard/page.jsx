@@ -295,19 +295,19 @@ export default function DashboardPage() {
 
   return (
     <AppPageShell>
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h3" component="h1" gutterBottom>
+      <Container maxWidth="lg" sx={{ py: { xs: 3, sm: 4 }, px: { xs: 2, sm: 3 } }}>
+        <Box sx={{ mb: { xs: 3, sm: 4 } }}>
+          <Typography variant="h3" component="h1" gutterBottom sx={{ fontSize: { xs: '1.75rem', sm: '2.5rem', md: '3rem' } }}>
             Dashboard
           </Typography>
-          <Typography variant="h6" color="text.secondary">
-            Welcome back, {user.name}! {isAdmin ? 'You have access to all appointments.' : 'Here are your personal appointments.'}
+          <Typography variant="h6" color="text.secondary" sx={{ fontSize: { xs: '0.95rem', sm: '1.15rem' } }}>
+            Welcome back, {user.name || user.fullName || user.email}! {isAdmin ? 'You have access to all appointments.' : 'Here are your personal appointments.'}
           </Typography>
         </Box>
 
         {/* Stats Cards */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} md={3}>
+        <Grid container spacing={2} sx={{ mb: 4 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card elevation={2}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -325,7 +325,7 @@ export default function DashboardPage() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card elevation={2}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -343,7 +343,7 @@ export default function DashboardPage() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card elevation={2}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -361,7 +361,7 @@ export default function DashboardPage() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card elevation={2}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -381,7 +381,7 @@ export default function DashboardPage() {
         </Grid>
 
         {/* Quick Actions */}
-        <Box sx={{ mb: 4 }}>
+        <Box sx={{ mb: 4, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 1.5, flexWrap: 'wrap' }}>
           <Button
             component={Link}
             href="/appointments/book"
@@ -389,7 +389,7 @@ export default function DashboardPage() {
             variant="contained"
             size="large"
             startIcon={<PlusIcon />}
-            sx={{ mr: 2 }}
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
             Book New Appointment
           </Button>
@@ -400,6 +400,7 @@ export default function DashboardPage() {
             variant="outlined"
             size="large"
             startIcon={<EventIcon />}
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
           >
             View All Appointments
           </Button>
@@ -631,6 +632,9 @@ export default function DashboardPage() {
                           backgroundColor: 'background.paper',
                           border: '1px solid',
                           borderColor: 'divider',
+                          alignItems: { xs: 'stretch', sm: 'center' },
+                          flexDirection: { xs: 'column', sm: 'row' },
+                          gap: { xs: 1.5, sm: 0 },
                           boxShadow: (theme) =>
                             theme.palette.mode === 'dark' ? 'none' : '0 1px 2px rgba(15,23,42,0.06)',
                         }}
@@ -702,6 +706,9 @@ export default function DashboardPage() {
                           backgroundColor: 'background.paper',
                           border: '1px solid',
                           borderColor: 'divider',
+                          alignItems: { xs: 'stretch', sm: 'center' },
+                          flexDirection: { xs: 'column', sm: 'row' },
+                          gap: { xs: 1.5, sm: 0 },
                           boxShadow: (theme) =>
                             theme.palette.mode === 'dark' ? 'none' : '0 1px 2px rgba(15,23,42,0.06)',
                         }}
@@ -761,6 +768,9 @@ export default function DashboardPage() {
                           backgroundColor: 'background.paper',
                           border: '1px solid',
                           borderColor: 'divider',
+                          alignItems: { xs: 'stretch', sm: 'center' },
+                          flexDirection: { xs: 'column', sm: 'row' },
+                          gap: { xs: 1.5, sm: 0 },
                           boxShadow: (theme) =>
                             theme.palette.mode === 'dark' ? 'none' : '0 1px 2px rgba(15,23,42,0.06)',
                         }}
@@ -801,11 +811,12 @@ export default function DashboardPage() {
       <Dialog
         open={welcomeDialogOpen}
         onClose={() => setWelcomeDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
         PaperProps={{
           sx: {
             borderRadius: 3,
-            minWidth: 450,
-            maxWidth: 500,
+            mx: 2,
           },
         }}
       >

@@ -5,6 +5,12 @@
 @layer base {
   html {
     font-family: system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+
+  body {
+    overflow-x: hidden;
+    max-width: 100%;
   }
 
   html.dark {
@@ -30,6 +36,6 @@
   }
   
   .card {
-    @apply bg-white rounded-lg shadow-md p-6 dark:bg-slate-900 dark:shadow-slate-950/50;
+    @apply bg-white rounded-lg shadow-md p-4 sm:p-6 dark:bg-slate-900 dark:shadow-slate-950/50;
   }
 }

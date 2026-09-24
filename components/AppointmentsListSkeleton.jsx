@@ -2,7 +2,7 @@
 export default function AppointmentsListSkeleton() {
   return (
     <div className="mx-auto max-w-7xl animate-pulse px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="h-9 w-48 rounded-lg bg-slate-200 dark:bg-slate-700" />
           <div className="mt-3 h-5 w-72 rounded bg-slate-200 dark:bg-slate-700" />

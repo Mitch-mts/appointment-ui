@@ -135,7 +135,7 @@ export default function AppointmentCard({
             )}
           </Box>
 
-          <Typography variant="h6" fontWeight={700} noWrap>
+          <Typography variant="h6" fontWeight={700} sx={{ wordBreak: 'break-word' }}>
             {showUserInfo ? appointment.fullName : 'Your appointment'}
           </Typography>
 
@@ -188,6 +188,7 @@ export default function AppointmentCard({
                 startIcon={<EditCalendar />}
                 onClick={() => onReschedule(appointment)}
                 disabled={busy}
+                sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
               >
                 Reschedule
               </Button>

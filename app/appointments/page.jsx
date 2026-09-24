@@ -158,18 +158,18 @@ export default function AppointmentsPage() {
 
   return (
     <>
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Appointments</h1>
-            <p className="mt-2 text-gray-600 dark:text-slate-400">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 sm:text-3xl">Appointments</h1>
+            <p className="mt-2 text-sm text-gray-600 dark:text-slate-400 sm:text-base">
               {isAdmin ? 'Manage all appointments across the system' : 'View and manage your personal appointments'}
             </p>
           </div>
           <Link
             href="/appointments/book"
             prefetch
-            className="btn-primary flex items-center space-x-2"
+            className="btn-primary inline-flex w-full items-center justify-center space-x-2 sm:w-auto"
           >
             <Plus className="h-5 w-5" />
             <span>Book Appointment</span>
@@ -178,10 +178,12 @@ export default function AppointmentsPage() {
 
         {/* Filter */}
         <div className="card mb-6">
-          <div className="flex items-center space-x-4">
-            <Filter className="h-5 w-5 text-gray-500 dark:text-slate-400" />
-            <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Filter:</span>
-            <div className="flex space-x-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-5 w-5 shrink-0 text-gray-500 dark:text-slate-400" />
+              <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Filter:</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
               {[
                 { key: 'all', label: 'All' },
                 { key: 'pending', label: 'Upcoming' },

@@ -114,7 +114,13 @@ export default function RescheduleDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{ sx: { m: 2, width: 'calc(100% - 32px)', maxHeight: '90vh' } }}
+    >
       <DialogTitle sx={{ fontWeight: 700 }}>Reschedule appointment</DialogTitle>
       <DialogContent dividers>
         {error && (
@@ -164,7 +170,7 @@ export default function RescheduleDialog({
           </>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 3, py: 2 }}>
+      <DialogActions sx={{ px: 3, py: 2, flexWrap: 'wrap', gap: 1 }}>
         <Button onClick={onClose} disabled={submitting}>
           Cancel
         </Button>

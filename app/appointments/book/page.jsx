@@ -278,7 +278,13 @@ function BookAppointmentPageContent() {
             Back to Appointments
           </Button>
         </Link>
-        <Typography variant="h4" component="h1" fontWeight={700} gutterBottom>
+        <Typography
+          variant="h4"
+          component="h1"
+          fontWeight={700}
+          gutterBottom
+          sx={{ fontSize: { xs: '1.6rem', sm: '2.125rem' } }}
+        >
           {isAdmin ? 'Book Appointment for Client' : 'Book Your Appointment'}
         </Typography>
         <Typography variant="body1" color="text.secondary">
@@ -287,7 +293,15 @@ function BookAppointmentPageContent() {
       </Box>
 
       <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-        <Stepper activeStep={activeStep} alternativeLabel>
+        <Stepper
+          activeStep={activeStep}
+          alternativeLabel
+          sx={{
+            '& .MuiStepLabel-label': {
+              fontSize: { xs: '0.7rem', sm: '0.85rem' },
+            },
+          }}
+        >
           {bookingSteps.map((label) => (
             <Step key={label}>
               <StepLabel>{label}</StepLabel>
@@ -590,7 +604,13 @@ function BookAppointmentPageContent() {
             startIcon={<ArrowBack />}
             onClick={goBack}
             disabled={activeStep === STEP_PROVIDER || submitting}
-            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, minWidth: 120 }}
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 600,
+              minWidth: { xs: '100%', sm: 120 },
+              flex: { xs: '1 1 100%', sm: '0 0 auto' },
+            }}
           >
             Back
           </Button>
@@ -601,7 +621,13 @@ function BookAppointmentPageContent() {
               endIcon={<ArrowForward />}
               onClick={goNext}
               disabled={!canContinueFromStep || submitting}
-              sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, minWidth: 140 }}
+              sx={{
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 700,
+                minWidth: { xs: '100%', sm: 140 },
+                flex: { xs: '1 1 100%', sm: '0 0 auto' },
+              }}
             >
               Continue
             </Button>
@@ -612,7 +638,13 @@ function BookAppointmentPageContent() {
               startIcon={submitting ? <CircularProgress size={18} color="inherit" /> : <CheckCircle />}
               onClick={handleConfirmAppointment}
               disabled={submitting}
-              sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, minWidth: 180 }}
+              sx={{
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 700,
+                minWidth: { xs: '100%', sm: 180 },
+                flex: { xs: '1 1 100%', sm: '0 0 auto' },
+              }}
             >
               {submitting ? 'Confirming…' : 'Confirm appointment'}
             </Button>

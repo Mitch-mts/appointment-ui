@@ -171,7 +171,7 @@ export default function ProviderAvailabilityPicker({
           alignItems: 'flex-start',
         }}
       >
-        <FormControl size="small" disabled={disabled} sx={{ minWidth: 160 }}>
+        <FormControl size="small" disabled={disabled} sx={{ minWidth: { xs: '100%', sm: 160 }, flex: { xs: '1 1 100%', sm: '0 0 auto' } }}>
           <InputLabel id={`${idPrefix}-day-from`}>First day</InputLabel>
           <Select
             labelId={`${idPrefix}-day-from`}
@@ -187,7 +187,7 @@ export default function ProviderAvailabilityPicker({
           </Select>
         </FormControl>
 
-        <FormControl size="small" disabled={disabled} sx={{ minWidth: 160 }}>
+        <FormControl size="small" disabled={disabled} sx={{ minWidth: { xs: '100%', sm: 160 }, flex: { xs: '1 1 100%', sm: '0 0 auto' } }}>
           <InputLabel id={`${idPrefix}-day-to`}>Last day</InputLabel>
           <Select
             labelId={`${idPrefix}-day-to`}

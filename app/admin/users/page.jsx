@@ -50,17 +50,17 @@ export default function AdminUsersPage() {
 
   return (
     <AppPageShell>
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Users</h1>
-          <p className="mt-2 text-gray-600 dark:text-slate-400">Registered users in the system</p>
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 sm:text-3xl">Users</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-slate-400 sm:text-base">Registered users in the system</p>
         </div>
 
         <div id="users">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
-              <Users className="h-6 w-6 text-primary-600 dark:text-primary-400" />
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-slate-100">Registered Users</h2>
+              <Users className="h-6 w-6 shrink-0 text-primary-600 dark:text-primary-400" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100 sm:text-2xl">Registered Users</h2>
             </div>
             {!loadingUsers && usersMeta && (
               <p className="text-sm text-gray-600 dark:text-slate-400">

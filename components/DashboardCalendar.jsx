@@ -29,6 +29,7 @@ import {
 import { formatTime } from '../lib/utils';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const WEEKDAYS_SHORT = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 /** Normalize API date to a local calendar day key (yyyy-MM-dd). */
 function appointmentDateKey(bookedDate) {
@@ -209,9 +210,9 @@ export default function DashboardCalendar({ appointments = [], loading = false }
                 gap: { xs: 0.5, sm: 1 },
               }}
             >
-              {WEEKDAYS.map((wd) => (
+              {WEEKDAYS.map((wd, index) => (
                 <Typography
-                  key={wd}
+                  key={`${wd}-${index}`}
                   variant="caption"
                   sx={{
                     fontWeight: 700,
@@ -220,7 +221,8 @@ export default function DashboardCalendar({ appointments = [], loading = false }
                     py: 0.5,
                   }}
                 >
-                  {wd}
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{wd}</Box>
+                  <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>{WEEKDAYS_SHORT[index]}</Box>
                 </Typography>
               ))}
 

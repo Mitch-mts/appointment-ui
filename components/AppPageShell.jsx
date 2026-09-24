@@ -6,7 +6,7 @@ import Navigation from './Navigation.jsx';
 /** Shared page chrome so route transitions keep the same background + nav. */
 export default function AppPageShell({ children }) {
   return (
-    <div className="relative min-h-screen bg-sky-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="relative min-h-screen overflow-x-hidden bg-sky-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       {/* Fixed wallpaper so tall pages (e.g. booking) scroll without clipping or layout twitch */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <Image

@@ -256,17 +256,17 @@ export default function AdminProvidersPage() {
 
   return (
     <AppPageShell>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="mb-8">
-          <Typography variant="h4" sx={{ fontWeight: 800 }}>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        <div className="mb-6 sm:mb-8">
+          <Typography variant="h4" sx={{ fontWeight: 800, fontSize: { xs: '1.6rem', sm: '2.125rem' } }}>
             Manage Providers
           </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
+          <Typography variant="body1" color="text.secondary" sx={{ mt: 1, fontSize: { xs: '0.9rem', sm: '1rem' } }}>
             Admin only: view provider details and availability, then add, edit, or remove providers.
           </Typography>
         </div>
 
-        <Paper elevation={2} sx={{ p: 4, borderRadius: 3, mb: 5 }}>
+        <Paper elevation={2} sx={{ p: { xs: 2, sm: 4 }, borderRadius: 3, mb: 5 }}>
           <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
             Add Provider
           </Typography>
@@ -278,7 +278,7 @@ export default function AdminProvidersPage() {
           )}
 
           <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
                 label="Title"
@@ -287,7 +287,7 @@ export default function AdminProvidersPage() {
                 onChange={(e) => handleFormChange('title', e.target.value)}
               />
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
                 label="Full name"
@@ -295,7 +295,7 @@ export default function AdminProvidersPage() {
                 onChange={(e) => handleFormChange('fullName', e.target.value)}
               />
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
                 label="Service"
@@ -303,7 +303,7 @@ export default function AdminProvidersPage() {
                 onChange={(e) => handleFormChange('service', e.target.value)}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <ProviderAvailabilityPicker
                 idPrefix="add-provider"
                 value={form.availability}
@@ -804,7 +804,9 @@ export default function AdminProvidersPage() {
             setError('');
           }
         }}
-        PaperProps={{ sx: { borderRadius: 3, minWidth: { xs: '100%', sm: 520 } } }}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{ sx: { borderRadius: 3, m: 2, width: 'calc(100% - 32px)' } }}
       >
         <DialogTitle>Edit provider</DialogTitle>
         <DialogContent>

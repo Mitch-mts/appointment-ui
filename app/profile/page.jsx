@@ -136,17 +136,17 @@ export default function ProfilePage() {
 
   return (
     <AppPageShell>
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Profile</h1>
-          <p className="mt-2 text-gray-600 dark:text-slate-400">Manage your account information</p>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 sm:text-3xl">Profile</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-slate-400 sm:text-base">Manage your account information</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Profile Info */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 min-w-0">
             <div className="card">
-              <div className="mb-6 flex items-center justify-between">
+              <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">
                   Personal Information
                 </h2>

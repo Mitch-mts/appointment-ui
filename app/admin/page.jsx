@@ -153,14 +153,14 @@ export default function AdminPage() {
 
   return (
     <AppPageShell>
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Admin Panel</h1>
-          <p className="mt-2 text-gray-600 dark:text-slate-400">Manage all appointments and system settings</p>
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 sm:text-3xl">Admin Panel</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-slate-400 sm:text-base">Manage all appointments and system settings</p>
         </div>
 
         {/* Stats Cards */}
-        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-4">
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
           <div className="card">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -286,7 +286,7 @@ export default function AdminPage() {
         
         {/* Users List (Admin only) */}
         <div id="users" className="mt-12">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
               <Users className="h-6 w-6 text-primary-600 dark:text-primary-400" />
               <h2 className="text-2xl font-semibold text-gray-900 dark:text-slate-100">Registered Users</h2>
